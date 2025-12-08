@@ -8,27 +8,96 @@ import os
 import re
 import time
 import json
-import docx
 import hashlib
 from io import BytesIO
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 import requests
-from docx import Document
-from docx.shared import Inches, Pt, RGBColor
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.oxml.ns import qn
-from docx.oxml import OxmlElement
-import PyPDF2
-from sentence_transformers import SentenceTransformer
-from pinecone import Pinecone, ServerlessSpec
-import pandas as pd
-import numpy as np
+import streamlit as st
+import sqlite3
+
+# Lazy imports for heavy ML/embedding libraries - loaded only when needed
+_SentenceTransformer = None
+_Pinecone = None
+_ServerlessSpec = None
+
+
+def _get_sentence_transformer_class():
+    """Lazy load SentenceTransformer class"""
+    global _SentenceTransformer
+    if _SentenceTransformer is None:
+        from sentence_transformers import SentenceTransformer
+        _SentenceTransformer = SentenceTransformer
+    return _SentenceTransformer
+
+
+def _get_pinecone_classes():
+    """Lazy load Pinecone classes"""
+    global _Pinecone, _ServerlessSpec
+    if _Pinecone is None:
+        from pinecone import Pinecone, ServerlessSpec
+        _Pinecone = Pinecone
+        _ServerlessSpec = ServerlessSpec
+    return _Pinecone, _ServerlessSpec
+
+
+# Lazy imports for document processing - loaded when needed
+_docx = None
+_Document = None
+_PyPDF2 = None
+
+
+def _get_docx():
+    """Lazy load docx and related"""
+    global _docx, _Document
+    if _docx is None:
+        import docx
+        from docx import Document
+        from docx.shared import Inches, Pt, RGBColor
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+        from docx.oxml.ns import qn
+        from docx.oxml import OxmlElement
+        _docx = docx
+        _Document = Document
+    return _docx
+
+
+def _get_pypdf2():
+    """Lazy load PyPDF2"""
+    global _PyPDF2
+    if _PyPDF2 is None:
+        import PyPDF2
+        _PyPDF2 = PyPDF2
+    return _PyPDF2
+
+
+# Import docx components needed at function level
+# These will be imported when first used
 import openai
 from openai import AzureOpenAI
 from config import Config
-import streamlit as st
-import sqlite3
+
+# Lazy imports for data processing
+_pd = None
+_np = None
+
+
+def _get_pandas():
+    """Lazy load pandas"""
+    global _pd
+    if _pd is None:
+        import pandas as pd
+        _pd = pd
+    return _pd
+
+
+def _get_numpy():
+    """Lazy load numpy"""
+    global _np
+    if _np is None:
+        import numpy as np
+        _np = np
+    return _np
 
 # Optional imports for enhanced features
 try:
@@ -321,8 +390,9 @@ def calculate_salary_band(matched_jobs):
     if not salaries:
         return 45000, 55000
     
-    avg_min = int(np.mean([s[0] for s in salaries]))
-    avg_max = int(np.mean([s[1] for s in salaries]))
+    # Use Python's built-in for simple mean calculation instead of numpy
+    avg_min = int(sum(s[0] for s in salaries) / len(salaries))
+    avg_max = int(sum(s[1] for s in salaries) / len(salaries))
     
     return avg_min, avg_max
 
@@ -428,6 +498,11 @@ def add_horizontal_line(doc, color="2B5797"):
 def generate_docx_from_json(resume_data, filename="resume.docx"):
     """Generate a modern professional .docx file from structured resume JSON (from CareerLens)"""
     try:
+        # Lazy load docx components when needed
+        from docx import Document
+        from docx.shared import Inches, Pt, RGBColor
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+        
         doc = Document()
         
         sections = doc.sections
@@ -915,6 +990,7 @@ class ResumeParser:
     def extract_text_from_pdf(self, pdf_file) -> str:
         """Extract text from PDF file object"""
         try:
+            PyPDF2 = _get_pypdf2()
             text = ""
             pdf_reader = PyPDF2.PdfReader(pdf_file)
             for page in pdf_reader.pages:
@@ -928,6 +1004,7 @@ class ResumeParser:
     def extract_text_from_docx(self, docx_file) -> str:
         """Extract text from DOCX file object"""
         try:
+            from docx import Document  # Lazy load when needed
             doc = Document(docx_file)
             text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
             return text
@@ -1587,6 +1664,55 @@ class LinkedInJobSearcher:
 
 
 # ============================================================================
+# CACHED MODEL LOADING - Prevents re-downloading on every page load
+# ============================================================================
+
+@st.cache_resource(show_spinner=False)
+def _get_sentence_transformer_model_cached():
+    """Load and cache SentenceTransformer model - only loaded once"""
+    print("📦 Loading sentence transformer model (first time only)...")
+    SentenceTransformer = _get_sentence_transformer_class()
+    model = SentenceTransformer(Config.MODEL_NAME)
+    print("✅ Model loaded and cached!")
+    return model
+
+
+@st.cache_resource(show_spinner=False)
+def _get_pinecone_client_cached():
+    """Get cached Pinecone client - only initialized once"""
+    print("🔗 Initializing Pinecone client (first time only)...")
+    Pinecone, _ = _get_pinecone_classes()
+    pc = Pinecone(api_key=Config.PINECONE_API_KEY)
+    print("✅ Pinecone client cached!")
+    return pc
+
+
+@st.cache_resource(show_spinner=False)
+def _get_pinecone_index_cached(_pc):
+    """Get cached Pinecone index - only initialized once"""
+    _, ServerlessSpec = _get_pinecone_classes()
+    existing_indexes = _pc.list_indexes()
+    index_names = [idx['name'] for idx in existing_indexes]
+    
+    if Config.INDEX_NAME not in index_names:
+        print(f"🔨 Creating new Pinecone index: {Config.INDEX_NAME}")
+        _pc.create_index(
+            name=Config.INDEX_NAME,
+            dimension=Config.EMBEDDING_DIMENSION,
+            metric='cosine',
+            spec=ServerlessSpec(
+                cloud='aws',
+                region=Config.PINECONE_ENVIRONMENT
+            )
+        )
+        time.sleep(2)
+    else:
+        print(f"✅ Using existing Pinecone index: {Config.INDEX_NAME}")
+    
+    return _pc.Index(Config.INDEX_NAME)
+
+
+# ============================================================================
 # JOB MATCHER - PINECONE SEMANTIC SEARCH & RANKING
 # ============================================================================
 
@@ -1594,36 +1720,34 @@ class JobMatcher:
     """Match resume to jobs using Pinecone semantic search and skill matching"""
     
     def __init__(self):
-        # Use cached Pinecone client (avoids re-initialization on every rerun)
-        self.pc = get_pinecone_client()
-        
-        # Use cached embedding model (avoids reloading ~85MB model on every rerun)
-        self.model = get_sentence_transformer_model()
-        
-        # Create/connect to index
-        self._initialize_index()
+        # Lazy initialization - resources are loaded only when first accessed via properties
+        # This avoids loading ~85MB model on every rerun
+        self._pc = None
+        self._model = None
+        self._index = None
     
-    def _initialize_index(self):
-        """Initialize Pinecone index"""
-        existing_indexes = self.pc.list_indexes()
-        index_names = [idx['name'] for idx in existing_indexes]
-        
-        if Config.INDEX_NAME not in index_names:
-            print(f"🔨 Creating new Pinecone index: {Config.INDEX_NAME}")
-            self.pc.create_index(
-                name=Config.INDEX_NAME,
-                dimension=Config.EMBEDDING_DIMENSION,
-                metric='cosine',
-                spec=ServerlessSpec(
-                    cloud='aws',
-                    region=Config.PINECONE_ENVIRONMENT
-                )
-            )
-            time.sleep(2)
-        else:
-            print(f"✅ Using existing Pinecone index: {Config.INDEX_NAME}")
-        
-        self.index = self.pc.Index(Config.INDEX_NAME)
+    @property
+    def pc(self):
+        """Lazy-load Pinecone client"""
+        if self._pc is None:
+            self._pc = _get_pinecone_client_cached()
+        return self._pc
+    
+    @property
+    def model(self):
+        """Lazy-load SentenceTransformer model"""
+        if self._model is None:
+            self._model = _get_sentence_transformer_model_cached()
+        return self._model
+    
+    @property
+    def index(self):
+        """Lazy-load Pinecone index"""
+        if self._index is None:
+            self._index = _get_pinecone_index_cached(self.pc)
+        return self._index
+    
+    # _initialize_index is no longer needed - index is lazy-loaded via property
     
     def generate_embedding(self, text: str) -> List[float]:
         """Generate embedding vector"""
@@ -1711,25 +1835,36 @@ class JobMatcher:
 # ============================================================================
 
 class JobSeekerBackend:
-    """Main backend with FULL integration"""
+    """Main backend with FULL integration - optimized for fast startup"""
     
     def __init__(self):
-        print("🚀 Initializing Job Matcher Backend...")
+        print("🚀 Initializing Job Matcher Backend (lightweight)...")
         Config.validate()
+        
+        # Lightweight components - instant init
         self.resume_parser = ResumeParser()
         self.gpt4_detector = GPT4JobRoleDetector()
-        # Use deferred initialization for job_searcher - will be initialized on first use
-        self._job_searcher = None
-        self.matcher = JobMatcher()
         
-        print("\n✅ Backend initialized!\n")
+        # Lazy-load heavy components - deferred until first use
+        self._job_searcher = None
+        self._matcher = None
+        
+        print("✅ Backend initialized (fast mode)!\n")
+    
+    @property
+    def matcher(self):
+        """Lazy-load JobMatcher only when needed"""
+        if self._matcher is None:
+            print("📦 Loading JobMatcher (first use)...")
+            self._matcher = JobMatcher()
+        return self._matcher
     
     @property
     def job_searcher(self):
         """Lazy initialization of job searcher - only tests connection when first used"""
         if self._job_searcher is None:
             print("\n🧪 Initializing RapidAPI job searcher...")
-            self._job_searcher = get_linkedin_job_searcher()
+            self._job_searcher = LinkedInJobSearcher(Config.RAPIDAPI_KEY)
             # Test API connection only once
             is_working, message = self._job_searcher.test_api_connection()
             if is_working:
@@ -1738,6 +1873,10 @@ class JobSeekerBackend:
                 print(f"⚠️ WARNING: {message}")
                 print("   Job search may not work properly!")
         return self._job_searcher
+    
+    def test_api_connection(self):
+        """Test API connection on demand (not at startup)"""
+        return self.job_searcher.test_api_connection()
     
     def process_resume(self, file_obj, filename: str) -> Tuple[Dict, Dict]:
         """Process resume and get AI analysis"""

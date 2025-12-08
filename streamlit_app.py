@@ -38,14 +38,52 @@ sys.setrecursionlimit(3000)
 
 import streamlit as st
 import sqlite3
-import pinecone
-import pandas as pd
-import matplotlib.pyplot as plt
-import plotly.graph_objects as go
-import numpy as np
 import json
 from typing import List, Dict
 from io import BytesIO
+
+# Lazy imports for heavy visualization libraries - only loaded when needed
+_pd = None
+_plt = None
+_go = None
+_np = None
+_pinecone = None
+
+
+def _get_pandas():
+    """Lazy load pandas"""
+    global _pd
+    if _pd is None:
+        import pandas as pd
+        _pd = pd
+    return _pd
+
+
+def _get_matplotlib():
+    """Lazy load matplotlib"""
+    global _plt
+    if _plt is None:
+        import matplotlib.pyplot as plt
+        _plt = plt
+    return _plt
+
+
+def _get_plotly():
+    """Lazy load plotly"""
+    global _go
+    if _go is None:
+        import plotly.graph_objects as go
+        _go = go
+    return _go
+
+
+def _get_numpy():
+    """Lazy load numpy"""
+    global _np
+    if _np is None:
+        import numpy as np
+        _np = np
+    return _np
 
 from backend import JobSeekerBackend
 from backend import LinkedInJobSearcher
@@ -370,6 +408,11 @@ def create_enhanced_visualizations(matched_jobs: List[Dict], job_seeker_data: Di
         st.warning("No visualization data available - no jobs matched")
         return
 
+    # Lazy load heavy libraries only when visualizations are created
+    np = _get_numpy()
+    plt = _get_matplotlib()
+    pd = _get_pandas()
+
     st.markdown("---")
     st.subheader("📊 Advanced Match Analysis")
     
@@ -565,6 +608,9 @@ def create_job_comparison_radar(matched_jobs: List[Dict]):
     """Create radar chart for top 3 job comparisons"""
     if len(matched_jobs) < 2:
         return
+    
+    # Lazy load plotly only when radar chart is created
+    go = _get_plotly()
         
     try:
         st.markdown("### 📊 Job Comparison Radar")
@@ -710,15 +756,15 @@ except ImportError as e:
                 progress = self.current_step / self.total_steps
                 self.progress_bar.progress(progress, text=f"⏳ {message}")
 
-# Initialize backend
-@st.cache_resource
+# Initialize backend - cached to prevent re-initialization
+@st.cache_resource(show_spinner="Loading CareerLens...")
 def load_backend():
     return JobSeekerBackend()
 
 backend = load_backend()
 
 
-# Initialize database - only once using caching
+# Initialize database - only once using caching (cleaner than session state)
 @st.cache_resource
 def initialize_databases():
     init_database()
@@ -1733,8 +1779,10 @@ def publish_new_job():
                                         value="Please send resume to recruit@headhunter.com, include position title in email subject",
                                         placeholder="Application process and contact information...")
 
+        # Use timedelta from datetime instead of pd.Timedelta for faster loading
+        from datetime import timedelta
         job_valid_until = st.date_input("Position Posting Validity Period*",
-                                      value=datetime.now().date() + pd.Timedelta(days=30))
+                                      value=datetime.now().date() + timedelta(days=30))
 
         # Submit button
         submitted = st.form_submit_button("💾 Publish Position", type="primary", use_container_width=True)
