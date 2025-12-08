@@ -14,7 +14,7 @@ class Config:
     MODEL_NAME = "all-MiniLM-L6-v2"
     
     # Azure OpenAI
-    AZURE_ENDPOINT = "https://hkust.azure-api.net/"
+    AZURE_ENDPOINT = "https://hkust.azure-api.net/openai"
     AZURE_API_KEY = "eacb49eb7c904d738c7644fc104aa7bb"
     AZURE_API_VERSION = "2024-10-21"
     AZURE_MODEL = "gpt-4o-mini"

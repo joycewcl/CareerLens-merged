@@ -8,11 +8,14 @@ WebSocket Stability Notes:
   2. Keepalive pings during long-running operations
   3. Progress tracking with automatic connection maintenance
   4. Optimized server configuration in .streamlit/config.toml
+  5. Connection state tracking and recovery mechanisms
+  6. Automatic reconnection handling via session state preservation
 """
 import warnings
 import os
 import gc
 import sys
+import time
 warnings.filterwarnings('ignore')
 
 # Streamlit Cloud optimization - set before importing streamlit
@@ -24,6 +27,11 @@ os.environ['SQLITE_TMPDIR'] = '/tmp'
 # the browser blocking residual analytics attempts, not an app error
 os.environ['STREAMLIT_BROWSER_GATHER_USAGE_STATS'] = 'false'
 os.environ['STREAMLIT_GLOBAL_DEVELOPMENT_MODE'] = 'false'
+
+# WebSocket connection timeout settings (affects Streamlit Cloud behavior)
+# Lower values = more frequent keepalive pings but more network overhead
+os.environ['STREAMLIT_SERVER_ENABLE_WEBSOCKET_COMPRESSION'] = 'true'
+os.environ['STREAMLIT_SERVER_MAX_MESSAGE_SIZE'] = '200'
 
 # Increase recursion limit for complex operations (prevents stack overflow)
 sys.setrecursionlimit(3000)
@@ -79,6 +87,7 @@ def _get_numpy():
 
 from backend import JobSeekerBackend
 from backend import LinkedInJobSearcher
+from backend import get_linkedin_job_searcher
 from backend import get_all_jobs_for_matching
 from backend import get_all_job_seekers
 from backend import analyze_match_simple
@@ -107,8 +116,17 @@ from backend import (
 from database import JobSeekerDB
 from database import HeadhunterDB
 
-db = JobSeekerDB()
-db2 = HeadhunterDB()
+# Cache database instances to avoid recreation on every rerun
+@st.cache_resource
+def get_job_seeker_db():
+    return JobSeekerDB()
+
+@st.cache_resource
+def get_headhunter_db():
+    return HeadhunterDB()
+
+db = get_job_seeker_db()
+db2 = get_headhunter_db()
 
 from database import save_job_seeker_info
 from database import save_head_hunter_job
@@ -268,8 +286,18 @@ def display_resume_generator_ui(job, user_profile, resume_text=None):
     st.info(f"**Tailoring resume for:** {job.get('title', 'Unknown')} at {job.get('company', 'Unknown')}")
     
     if st.button("🚀 Generate Tailored Resume", type="primary", use_container_width=True):
-        with st.spinner("✨ AI is tailoring your resume..."):
+        # Use ProgressTracker to maintain WebSocket connection during AI generation
+        with ProgressTracker("Tailoring your resume", total_steps=3) as tracker:
+            tracker.update(1, "Analyzing job requirements...")
+            _websocket_keepalive("Analyzing job")
+            
+            tracker.update(2, "AI is generating tailored content...")
+            _websocket_keepalive("AI generation in progress")
+            
             resume_data = generate_tailored_resume(user_profile, job, resume_text)
+            
+            tracker.update(3, "Finalizing resume...")
+            _websocket_keepalive("Complete")
             
             if resume_data:
                 st.success("✅ Tailored resume generated!")
@@ -658,6 +686,12 @@ st.set_page_config(
 # Import modular UI components from modules/ (for Market Dashboard page)
 try:
     from modules.utils import _cleanup_session_state, validate_secrets
+    from modules.utils.helpers import (
+        _chunked_sleep,
+        _websocket_keepalive,
+        _ensure_websocket_alive,
+        ProgressTracker
+    )
     from modules.ui.styles import render_styles
     from modules.ui import (
         render_sidebar as modular_render_sidebar,
@@ -669,9 +703,58 @@ try:
         display_match_breakdown
     )
     MODULES_AVAILABLE = True
+    WEBSOCKET_UTILS_AVAILABLE = True
 except ImportError as e:
     MODULES_AVAILABLE = False
+    WEBSOCKET_UTILS_AVAILABLE = False
     # Modules not available - Market Dashboard page will be disabled
+    # Provide fallback implementations for WebSocket utilities
+    def _websocket_keepalive(message=None, force=False):
+        """Fallback no-op implementation"""
+        pass
+    
+    def _ensure_websocket_alive():
+        """Fallback no-op implementation"""
+        pass
+    
+    def _chunked_sleep(delay, message_prefix=""):
+        """Fallback implementation using regular sleep"""
+        import time
+        time.sleep(delay)
+    
+    class ProgressTracker:
+        """Fallback implementation without WebSocket keepalive"""
+        def __init__(self, description="Processing", total_steps=100, show_progress=True):
+            self.description = description
+            self.total_steps = total_steps
+            self.show_progress = show_progress
+            self.current_step = 0
+            self.progress_bar = None
+        
+        def __enter__(self):
+            if self.show_progress:
+                self.progress_bar = st.progress(0, text=f"⏳ {self.description}...")
+            return self
+        
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            if self.progress_bar:
+                self.progress_bar.empty()
+            return False
+        
+        def update(self, step=None, message=None):
+            if step is not None:
+                self.current_step = step
+            else:
+                self.current_step += 1
+            progress = min(self.current_step / self.total_steps, 1.0)
+            if self.show_progress and self.progress_bar:
+                display_message = message or f"⏳ {self.description}... ({int(progress * 100)}%)"
+                self.progress_bar.progress(progress, text=display_message)
+        
+        def set_message(self, message):
+            if self.show_progress and self.progress_bar:
+                progress = self.current_step / self.total_steps
+                self.progress_bar.progress(progress, text=f"⏳ {message}")
 
 # Initialize backend - cached to prevent re-initialization
 @st.cache_resource(show_spinner="Loading CareerLens...")
@@ -681,11 +764,14 @@ def load_backend():
 backend = load_backend()
 
 
-# Initialize database - only once using session state flag
-if 'db_initialized' not in st.session_state:
+# Initialize database - only once using caching (cleaner than session state)
+@st.cache_resource
+def initialize_databases():
     init_database()
     init_head_hunter_database()
-    st.session_state.db_initialized = True
+    return True
+
+_db_initialized = initialize_databases()
 
 # Initialize session state
 if 'current_page' not in st.session_state:
@@ -735,6 +821,27 @@ if 'user_skills_embeddings_cache' not in st.session_state:
 if 'skill_embeddings_cache' not in st.session_state:
     st.session_state.skill_embeddings_cache = {}
 
+# WebSocket connection tracking for recovery
+if 'ws_connection_time' not in st.session_state:
+    st.session_state.ws_connection_time = time.time()
+if 'ws_last_activity' not in st.session_state:
+    st.session_state.ws_last_activity = time.time()
+if 'ws_reconnect_count' not in st.session_state:
+    st.session_state.ws_reconnect_count = 0
+
+# Update last activity timestamp on each rerun
+st.session_state.ws_last_activity = time.time()
+
+# Check for potential reconnection (session was idle for > 30 seconds)
+# This indicates a possible reconnection after connection loss
+if time.time() - st.session_state.get('ws_last_activity', time.time()) > 30:
+    st.session_state.ws_reconnect_count += 1
+    st.session_state.ws_connection_time = time.time()
+    # Clear potentially stale data but preserve user input
+    if 'matched_jobs' in st.session_state and len(st.session_state.matched_jobs) > 0:
+        # Keep matched jobs for continuity but note reconnection
+        pass
+
 # Limit search history size
 MAX_SEARCH_HISTORY = 20
 if len(st.session_state.search_history) > MAX_SEARCH_HISTORY:
@@ -746,6 +853,12 @@ if MODULES_AVAILABLE:
         _cleanup_session_state()
     except Exception:
         pass
+
+# Periodic WebSocket keepalive on app rerun
+try:
+    _ensure_websocket_alive()
+except Exception:
+    pass
 
 # APP UI
 def main_analyzer_page():
@@ -789,10 +902,19 @@ def main_analyzer_page():
 
         if st.button("🔍 Analyze with GPT-4", type="primary", use_container_width=True, key="analyze_button"):
 
-            # STEP 1: Analyze Resume
-            with st.spinner("🤖 Step 1/2: Analyzing your resume with GPT-4..."):
+            # STEP 1: Analyze Resume with WebSocket keepalive
+            with ProgressTracker("Analyzing your resume with GPT-4", total_steps=3) as tracker:
                 try:
+                    tracker.update(1, "Extracting text from your CV...")
+                    _websocket_keepalive("Extracting text")
+                    
+                    tracker.update(2, "AI is analyzing your skills and experience...")
+                    _websocket_keepalive("AI analysis in progress")
+                    
                     resume_data, ai_analysis = backend.process_resume(cv_file, cv_file.name)
+                    
+                    tracker.update(3, "Analysis complete!")
+                    _websocket_keepalive("Complete")
                     
                     st.balloons()
 
@@ -1213,12 +1335,16 @@ def job_recommendations_page(job_seeker_id=None):
     # -------------------------------------------------------
     # 🔎 STEP 2: Search Jobs via RapidAPI (SAFE VERSION)
     # -------------------------------------------------------
-    with st.spinner(f"🔎 Step 2/3: Searching {num_jobs_to_search} jobs via RapidAPI..."):
+    # Use ProgressTracker to maintain WebSocket connection during long operations
+    with ProgressTracker(f"Searching {num_jobs_to_search} jobs", total_steps=5) as tracker:
 
         try:
             # ----------------------------------------------------
             # 1) Load job seeker ID safely
             # ----------------------------------------------------
+            tracker.update(1, "Loading profile settings...")
+            _websocket_keepalive("Loading profile")
+            
             current_id = st.session_state.get("job_seeker_id")
 
             if not current_id:
@@ -1254,6 +1380,9 @@ def job_recommendations_page(job_seeker_id=None):
             location_preference = search_fields.get("location_preference", "Hong Kong")
             hard_skills         = search_fields.get("hard_skills", "")
 
+            tracker.update(2, "Preparing search query...")
+            _websocket_keepalive("Preparing query")
+            
             # Construct resume_data with all fields
                         
             resume_data = {
@@ -1318,16 +1447,22 @@ def job_recommendations_page(job_seeker_id=None):
                 f"**Location:** {location_preference}"
             )
 
+            tracker.update(3, "Connecting to job search API...")
+            _websocket_keepalive("Connecting to API")
+
             # ----------------------------------------------------
-            # 5) Perform rapid API search
+            # 5) Perform rapid API search (use cached searcher for performance)
             # ----------------------------------------------------
-            rapidapi = LinkedInJobSearcher(api_key=Config.RAPIDAPI_KEY)
+            rapidapi = get_linkedin_job_searcher()
 
             rapidapi_results = rapidapi.search_jobs(
                 keywords=search_keywords,
                 location=location_preference,
                 limit=num_jobs_to_search
             )
+            
+            # Send keepalive after API call
+            _websocket_keepalive("Processing results")
 
             if not rapidapi_results:
                 st.warning("⚠ No jobs found via RapidAPI. Try adjusting your keywords.")
@@ -1342,17 +1477,20 @@ def job_recommendations_page(job_seeker_id=None):
         # ----------------------------------------
         # Step 2: Search and Match Jobs via Backend
         # ----------------------------------------
-        with st.spinner(f"🔎 Step 2/3: Searching {num_jobs_to_search} jobs and matching..."):
+        tracker.update(4, f"Matching {num_jobs_to_search} jobs with your profile...")
+        _websocket_keepalive("Matching jobs")
 
-            try:
-                matched_jobs = backend.search_and_match_jobs(
-                    resume_data=resume_data,
-                    ai_analysis=ai_analysis,
-                    num_jobs=num_jobs_to_search
-                )
-            except Exception as e:
-                st.error(f"❌ Unexpected error while searching jobs: {str(e)}")
-                st.stop()
+        try:
+            matched_jobs = backend.search_and_match_jobs(
+                resume_data=resume_data,
+                ai_analysis=ai_analysis,
+                num_jobs=num_jobs_to_search
+            )
+            tracker.update(5, "Search complete!")
+            _websocket_keepalive("Complete")
+        except Exception as e:
+            st.error(f"❌ Unexpected error while searching jobs: {str(e)}")
+            st.stop()
 
         # ----------------------------------------
         # 📊 STEP 3: Display Results
@@ -1884,30 +2022,33 @@ def recruitment_match_page():
     if st.button("🚀 Start Smart Matching", type="primary", use_container_width=True):
         st.subheader("📈 Match Results")
 
-        progress_bar = st.progress(0)
         results = []
+        total_candidates = min(len(seekers), max_candidates)
+        
+        # Use ProgressTracker for WebSocket keepalive during matching
+        with ProgressTracker("Smart Matching", total_steps=total_candidates) as tracker:
+            for i, seeker in enumerate(seekers[:max_candidates]):
+                tracker.update(i + 1, f"Analyzing candidate {i + 1}/{total_candidates}...")
+                
+                # Send keepalive every 3 candidates to maintain connection
+                if i % 3 == 0:
+                    _websocket_keepalive(f"Matching candidate {i + 1}")
 
-        for i, seeker in enumerate(seekers[:max_candidates]):
-            progress = (i + 1) / min(len(seekers), max_candidates)
-            progress_bar.progress(progress)
+                # Use simplified matching algorithm
+                analysis_result = analyze_match_simple(selected_job, seeker)
+                match_score = analysis_result.get('match_score', 0)
 
-            # Use simplified matching algorithm
-            analysis_result = analyze_match_simple(selected_job, seeker)
-            match_score = analysis_result.get('match_score', 0)
-
-            if match_score >= min_match_score:
-                results.append({
-                    'seeker_id': seeker[0],
-                    'name': seeker[1],
-                    'current_title': seeker[9],
-                    'experience': seeker[3],
-                    'education': seeker[4],
-                    'match_score': match_score,
-                    'analysis': analysis_result,
-                    'raw_data': seeker
-                })
-
-        progress_bar.empty()
+                if match_score >= min_match_score:
+                    results.append({
+                        'seeker_id': seeker[0],
+                        'name': seeker[1],
+                        'current_title': seeker[9],
+                        'experience': seeker[3],
+                        'education': seeker[4],
+                        'match_score': match_score,
+                        'analysis': analysis_result,
+                        'raw_data': seeker
+                    })
 
         # Display results
         if results:

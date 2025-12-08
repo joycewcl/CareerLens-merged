@@ -1,0 +1,74 @@
+# =============================================================================
+# Streamlit Configuration for CareerLens
+# =============================================================================
+# Optimized settings to prevent WebSocket disconnection on Streamlit Cloud
+# See: https://docs.streamlit.io/library/advanced-features/configuration
+
+[server]
+# Enable WebSocket compression to reduce data transfer
+enableWebsocketCompression = true
+
+# Enable XSRF protection
+enableXsrfProtection = true
+
+# Maximum upload size in MB (for CV files)
+maxUploadSize = 50
+
+# Maximum message size in MB for WebSocket messages
+# Increase to prevent disconnection with large responses
+maxMessageSize = 200
+
+# Run in headless mode (required for cloud deployment)
+headless = true
+
+# Enable CORS for cross-origin requests
+enableCORS = false
+
+# Allow running on any address (required for cloud deployment)
+address = "0.0.0.0"
+
+# Server timeout settings - critical for preventing WebSocket drops
+# How long to wait before timing out when uploading a file (in seconds)
+fileWatcherType = "poll"
+
+# Script run re-run debounce (in seconds)
+# Prevents rapid re-runs that can overwhelm WebSocket
+runOnSave = false
+
+[browser]
+# Don't automatically open browser (cloud deployment)
+serverAddress = "localhost"
+
+# Disable gathering usage stats to prevent tracking script interference
+gatherUsageStats = false
+
+[client]
+# Show error details in the browser
+showErrorDetails = true
+
+# Caching settings
+caching = true
+
+# Display running state in browser tab
+showSidebarNavigation = true
+
+[runner]
+# Magic commands - disable for production stability
+magicEnabled = false
+
+# Fast re-run - improves responsiveness
+fastReruns = true
+
+# Enforce serializable session state for better memory management
+enforceSerializableSessionState = false
+
+[theme]
+# Use default theme for consistent appearance
+base = "light"
+
+[logger]
+# Reduce log level to minimize I/O operations
+level = "warning"
+
+# Log format
+messageFormat = "%(asctime)s %(levelname)s - %(message)s"

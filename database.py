@@ -75,38 +75,48 @@ class JobSeekerDB:
             return None
 
 
-# Functions moved to the bottom
+# Database initialization flag to prevent redundant operations
+_db_initialized = False
+
 def init_database():
-    """Initialize job seeker database"""
+    """Initialize job seeker database - optimized to skip if already initialized"""
+    global _db_initialized
+    if _db_initialized:
+        return
+    
     try:
         conn = sqlite3.connect('job_seeker.db')
         c = conn.cursor()
-        c.execute("""
-            CREATE TABLE IF NOT EXISTS job_seekers (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                job_seeker_id TEXT UNIQUE,
-                timestamp TEXT,
-                education_level TEXT,
-                major TEXT,
-                graduation_status TEXT,
-                university_background TEXT,
-                languages TEXT,
-                certificates TEXT,
-                hard_skills TEXT,
-                soft_skills TEXT,
-                work_experience TEXT,
-                project_experience TEXT,
-                location_preference TEXT,
-                industry_preference TEXT,
-                salary_expectation TEXT,
-                benefits_expectation TEXT,
-                primary_role TEXT,
-                simple_search_terms TEXT
-            )
-        """)
-        conn.commit()
+        # Check if table exists first
+        c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='job_seekers'")
+        if c.fetchone() is None:
+            c.execute("""
+                CREATE TABLE IF NOT EXISTS job_seekers (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    job_seeker_id TEXT UNIQUE,
+                    timestamp TEXT,
+                    education_level TEXT,
+                    major TEXT,
+                    graduation_status TEXT,
+                    university_background TEXT,
+                    languages TEXT,
+                    certificates TEXT,
+                    hard_skills TEXT,
+                    soft_skills TEXT,
+                    work_experience TEXT,
+                    project_experience TEXT,
+                    location_preference TEXT,
+                    industry_preference TEXT,
+                    salary_expectation TEXT,
+                    benefits_expectation TEXT,
+                    primary_role TEXT,
+                    simple_search_terms TEXT
+                )
+            """)
+            conn.commit()
+            print("✅ Job seeker database initialized successfully")
         conn.close()
-        print("✅ Job seeker database initialized successfully")
+        _db_initialized = True
     except Exception as e:
         print(f"❌ Database initialization failed: {e}")
 
@@ -160,37 +170,48 @@ def save_job_seeker_info(education_level, major, graduation_status, university_b
 
 
 
+_head_hunter_db_initialized = False
+
 def init_head_hunter_database():
-    """Initialize headhunter positions database"""
+    """Initialize headhunter positions database - optimized to skip if already initialized"""
+    global _head_hunter_db_initialized
+    if _head_hunter_db_initialized:
+        return
+    
     try:
         conn = sqlite3.connect('head_hunter_jobs.db')
         c = conn.cursor()
-        c.execute("""
-            CREATE TABLE IF NOT EXISTS head_hunter_jobs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp TEXT,
-                job_title TEXT,
-                job_description TEXT,
-                main_responsibilities TEXT,
-                required_skills TEXT,
-                client_company TEXT,
-                industry TEXT,
-                work_location TEXT,
-                work_type TEXT,
-                company_size TEXT,
-                employment_type TEXT,
-                experience_level TEXT,
-                visa_support TEXT,
-                min_salary REAL,
-                max_salary REAL,
-                currency TEXT,
-                benefits TEXT,
-                application_method TEXT,
-                job_valid_until TEXT
-            )
-        """)
-        conn.commit()
+        # Check if table exists first
+        c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='head_hunter_jobs'")
+        if c.fetchone() is None:
+            c.execute("""
+                CREATE TABLE IF NOT EXISTS head_hunter_jobs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT,
+                    job_title TEXT,
+                    job_description TEXT,
+                    main_responsibilities TEXT,
+                    required_skills TEXT,
+                    client_company TEXT,
+                    industry TEXT,
+                    work_location TEXT,
+                    work_type TEXT,
+                    company_size TEXT,
+                    employment_type TEXT,
+                    experience_level TEXT,
+                    visa_support TEXT,
+                    min_salary REAL,
+                    max_salary REAL,
+                    currency TEXT,
+                    benefits TEXT,
+                    application_method TEXT,
+                    job_valid_until TEXT
+                )
+            """)
+            conn.commit()
+            print("✅ Headhunter database initialized successfully")
         conn.close()
+        _head_hunter_db_initialized = True
     except Exception as e:
         st.error(f"Database initialization failed: {e}")
 
@@ -243,7 +264,7 @@ class HeadhunterDB:
             conn = sqlite3.connect('head_hunter_jobs.db')
             c = conn.cursor()
             c.execute("SELECT * FROM head_hunter_jobs ORDER BY id DESC")
-            data = c.fetchall()   # ← FIXED
+            data = c.fetchall()
             conn.close()
             return data
         except Exception as e:
@@ -251,8 +272,8 @@ class HeadhunterDB:
             return []
 
 
-conn = sqlite3.connect("head_hunter_jobs.db")
-c = conn.cursor()
+# Removed global database connection that was created at module import time
+# Connections are now created on-demand in each function
 
 def get_job_seeker_search_fields(job_seeker_id: str):
     conn = sqlite3.connect("job_seeker.db")
