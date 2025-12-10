@@ -12,16 +12,21 @@ def display_user_profile():
     
     st.markdown("---")
     st.subheader("📄 Upload Your Resume (Optional)")
-    st.caption("Upload your resume to automatically extract your information")
+    st.caption("Upload your resume to automatically extract and fill your profile")
     
     uploaded_file = st.file_uploader(
         "Choose a resume file",
         type=['pdf', 'docx', 'txt'],
-        help="Supported formats: PDF, DOCX, TXT"
+        help="Supported formats: PDF, DOCX, TXT - Your profile will be auto-filled"
     )
     
     if uploaded_file is not None:
-        if st.button("🔍 Extract Information from Resume", type="primary", use_container_width=True):
+        # Create a unique key for the uploaded file to detect new uploads
+        file_key = f"{uploaded_file.name}_{uploaded_file.size}"
+        current_cached_key = st.session_state.get('_profile_last_uploaded_file_key')
+        
+        # Only process if this is a new file (not already processed)
+        if current_cached_key != file_key:
             progress_bar = st.progress(0, text="📖 Reading resume...")
             
             resume_text = extract_text_from_resume(uploaded_file)
@@ -29,9 +34,7 @@ def display_user_profile():
             if resume_text:
                 progress_bar.progress(25, text=f"✅ Read {len(resume_text)} characters")
                 st.session_state.resume_text = resume_text
-                
-                with st.expander("📝 Preview Extracted Text"):
-                    st.text(resume_text[:1000] + "..." if len(resume_text) > 1000 else resume_text)
+                st.session_state._profile_last_uploaded_file_key = file_key
                 
                 progress_bar.progress(35, text="🤖 Extracting profile with AI...")
                 profile_data = extract_profile_from_resume(resume_text)
@@ -59,7 +62,7 @@ def display_user_profile():
                     time.sleep(0.3)
                     progress_bar.empty()
                     
-                    st.success("✅ Profile information extracted successfully! Review and edit below.")
+                    st.success("✅ Profile information extracted and filled below! Review and edit as needed.")
                     st.balloons()
                     time.sleep(0.5)
                     st.rerun()
@@ -69,6 +72,16 @@ def display_user_profile():
             else:
                 progress_bar.empty()
                 st.error("❌ Could not read the resume file. Please try a different file.")
+        else:
+            # File already processed, show confirmation
+            if st.session_state.user_profile.get('name'):
+                st.success(f"✅ Profile loaded for: **{st.session_state.user_profile.get('name')}**")
+            
+            # Show preview of extracted text if available
+            if st.session_state.get('resume_text'):
+                with st.expander("📝 Preview Extracted Text", expanded=False):
+                    resume_text = st.session_state.resume_text
+                    st.text(resume_text[:1000] + "..." if len(resume_text) > 1000 else resume_text)
     
     st.markdown("---")
     
