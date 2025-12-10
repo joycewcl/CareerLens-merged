@@ -268,3 +268,108 @@ Return ONLY valid JSON, no additional text or markdown."""
     except Exception as e:
         st.error(f"Error extracting profile: {e}")
         return None
+
+
+def verify_profile_data_pass2(profile_data, resume_text):
+    """
+    Run Pass 2 verification on existing profile data (Lazy Pass 2).
+    
+    This function is called on-demand before resume generation to verify
+    the accuracy of dates, company names, job titles, and education details.
+    
+    Args:
+        profile_data: Dict containing extracted profile data from Pass 1
+        resume_text: Original resume text for cross-reference
+        
+    Returns:
+        Dict with verified/corrected profile data, or original data if verification fails
+    """
+    if not profile_data or not resume_text:
+        return profile_data
+    
+    # Check if already verified in this session
+    if st.session_state.get('profile_verified', False):
+        return profile_data
+    
+    try:
+        text_gen = get_text_generator()
+        
+        if text_gen is None:
+            st.warning("⚠️ AI service unavailable. Using unverified profile data.")
+            return profile_data
+        
+        # Extract relevant sections for verification
+        relevant_resume_sections = extract_relevant_resume_sections(resume_text)
+        
+        if relevant_resume_sections:
+            resume_context = f"""RELEVANT RESUME SECTIONS (Experience and Education only):
+{relevant_resume_sections}"""
+        else:
+            resume_context = f"""RELEVANT RESUME SECTIONS (limited):
+{resume_text[:1500]}"""
+        
+        prompt_pass2 = f"""You are a resume quality checker. Review the extracted profile data against the relevant resume sections and verify accuracy, especially for dates and company names.
+
+{resume_context}
+
+EXTRACTED PROFILE DATA (to verify):
+{json.dumps(profile_data, indent=2)}
+
+Please review and correct the extracted data, paying special attention to:
+1. **Dates** - Verify all employment dates, education dates, and certification dates are accurate
+2. **Company Names** - Verify all company/organization names are spelled correctly
+3. **Job Titles** - Verify job titles are accurate
+4. **Education Institutions** - Verify institution names are correct
+
+Return the corrected profile data in the same JSON format. If everything is correct, return the data as-is. If corrections are needed, return the corrected version.
+
+Return ONLY valid JSON with the same structure as the input. No additional text or markdown."""
+        
+        payload_pass2 = {
+            "messages": [
+                {"role": "system", "content": "You are a resume quality checker. Verify and correct extracted data, especially dates and company names. Return only valid JSON."},
+                {"role": "user", "content": prompt_pass2}
+            ],
+            "max_tokens": 2000,
+            "temperature": 0.1,
+            "response_format": {"type": "json_object"}
+        }
+        
+        _websocket_keepalive("Verifying profile data for resume generation...")
+        
+        def make_request_pass2():
+            return requests.post(
+                text_gen.url,
+                headers=text_gen.headers,
+                json=payload_pass2,
+                timeout=45
+            )
+        
+        response_pass2 = api_call_with_retry(make_request_pass2, max_retries=2)
+        
+        if response_pass2 and response_pass2.status_code == 200:
+            result_pass2 = response_pass2.json()
+            content_pass2 = result_pass2['choices'][0]['message']['content']
+            
+            if text_gen.token_tracker and 'usage' in result_pass2:
+                usage = result_pass2['usage']
+                prompt_tokens = usage.get('prompt_tokens', 0)
+                completion_tokens = usage.get('completion_tokens', 0)
+                text_gen.token_tracker.add_completion_tokens(prompt_tokens, completion_tokens)
+            
+            try:
+                profile_data_verified = json.loads(content_pass2)
+                # Mark as verified to avoid re-verification in same session
+                st.session_state.profile_verified = True
+                st.success("✅ Profile data verified for accuracy")
+                return profile_data_verified
+            except json.JSONDecodeError:
+                st.warning("⚠️ Verification parsing failed. Using original profile data.")
+                return profile_data
+        else:
+            st.warning("⚠️ Verification service unavailable. Using original profile data.")
+            return profile_data
+            
+    except Exception as e:
+        st.warning(f"⚠️ Verification error: {e}. Using original profile data.")
+        return profile_data

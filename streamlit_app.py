@@ -280,23 +280,41 @@ def display_market_positioning_dashboard(matched_jobs, user_profile):
 
 
 def display_resume_generator_ui(job, user_profile, resume_text=None):
-    """Display Resume Tailoring UI (from CareerLens)"""
+    """Display Resume Tailoring UI (from CareerLens)
+    
+    Now includes Lazy Pass 2: Profile verification runs here before resume generation,
+    ensuring accurate dates, company names, and job titles in the tailored resume.
+    """
+    from modules.resume_upload import verify_profile_data_pass2
+    
     st.subheader("✨ AI Resume Tailoring")
     
     st.info(f"**Tailoring resume for:** {job.get('title', 'Unknown')} at {job.get('company', 'Unknown')}")
     
     if st.button("🚀 Generate Tailored Resume", type="primary", use_container_width=True):
         # Use ProgressTracker to maintain WebSocket connection during AI generation
-        with ProgressTracker("Tailoring your resume", total_steps=3) as tracker:
-            tracker.update(1, "Analyzing job requirements...")
+        with ProgressTracker("Tailoring your resume", total_steps=4) as tracker:
+            
+            # LAZY PASS 2: Verify profile data before resume generation
+            tracker.update(1, "Verifying profile accuracy...")
+            _websocket_keepalive("Verifying profile data")
+            
+            verified_profile = verify_profile_data_pass2(user_profile, resume_text)
+            
+            # Update session state with verified profile
+            if verified_profile and verified_profile != user_profile:
+                st.session_state.user_profile = verified_profile
+                user_profile = verified_profile
+            
+            tracker.update(2, "Analyzing job requirements...")
             _websocket_keepalive("Analyzing job")
             
-            tracker.update(2, "AI is generating tailored content...")
+            tracker.update(3, "AI is generating tailored content...")
             _websocket_keepalive("AI generation in progress")
             
             resume_data = generate_tailored_resume(user_profile, job, resume_text)
             
-            tracker.update(3, "Finalizing resume...")
+            tracker.update(4, "Finalizing resume...")
             _websocket_keepalive("Complete")
             
             if resume_data:
@@ -1311,27 +1329,43 @@ def job_recommendations_page(job_seeker_id=None):
 
 
     # ----------------------------------------
-    # 🔧 Advanced Search Tweaks
+    # 🔧 Search Speed Options
     # ----------------------------------------
+    st.markdown("##### ⚡ Search Mode")
+    
+    search_mode = st.radio(
+        "Choose search speed:",
+        ["⚡ Quick Search (15 jobs)", "🔍 Standard Search (25 jobs)", "🔬 Deep Search (40 jobs)"],
+        index=0,
+        horizontal=True,
+        help="Quick = faster results, Deep = more comprehensive but slower"
+    )
+    
+    # Map search mode to job count
+    search_mode_map = {
+        "⚡ Quick Search (15 jobs)": 15,
+        "🔍 Standard Search (25 jobs)": 25,
+        "🔬 Deep Search (40 jobs)": 40
+    }
+    num_jobs_to_search = search_mode_map.get(search_mode, 15)
+    
     col1, col2 = st.columns(2)
-
+    
     with col1:
-        num_jobs_to_search = st.slider(
-            "Jobs to search", 
-            10, 15, 5, 1,
-            key="jobs_search_slider"
-        )
-
-    with col2:
         num_jobs_to_show = st.slider(
             "Top matches to display", 
-            1, 10, 5,
+            3, 15, 5,
             key="jobs_show_slider"
         )
-
-    st.info(
-        "💡 **Note:** Jobs are searched globally and ranked by how well they match your profile, regardless of location."
-    )
+    
+    with col2:
+        # Show estimated time based on search mode
+        time_estimates = {
+            "⚡ Quick Search (15 jobs)": "~30-60 seconds",
+            "🔍 Standard Search (25 jobs)": "~60-90 seconds",
+            "🔬 Deep Search (40 jobs)": "~90-120 seconds"
+        }
+        st.info(f"⏱️ Estimated time: {time_estimates.get(search_mode, '~60 seconds')}")
     # -------------------------------------------------------
     # 🔎 STEP 2: Search Jobs via RapidAPI (SAFE VERSION)
     # -------------------------------------------------------
@@ -1442,7 +1476,7 @@ def job_recommendations_page(job_seeker_id=None):
             # 4) Show user what we are searching
             # ----------------------------------------------------
             st.info(
-                f"📡 Searching LinkedIn via RapidAPI:\n\n"
+                f"📡 Searching jobs via RapidAPI:\n\n"
                 f"**Keywords:** {search_keywords}\n"
                 f"**Location:** {location_preference}"
             )
@@ -1451,46 +1485,40 @@ def job_recommendations_page(job_seeker_id=None):
             _websocket_keepalive("Connecting to API")
 
             # ----------------------------------------------------
-            # 5) Perform rapid API search (use cached searcher for performance)
+            # 5) Search and Match Jobs via Backend (SINGLE search - no duplicates)
             # ----------------------------------------------------
-            rapidapi = get_linkedin_job_searcher()
+            tracker.update(4, f"Searching & matching {num_jobs_to_search} jobs...")
+            _websocket_keepalive("Searching jobs")
 
-            rapidapi_results = rapidapi.search_jobs(
-                keywords=search_keywords,
-                location=location_preference,
-                limit=num_jobs_to_search
-            )
-            
-            # Send keepalive after API call
-            _websocket_keepalive("Processing results")
-
-            if not rapidapi_results:
-                st.warning("⚠ No jobs found via RapidAPI. Try adjusting your keywords.")
-                matched_jobs = []
-            else:
-                matched_jobs = rapidapi_results
-
-        except Exception as e:
-            st.error(f"❌ Unexpected error while searching jobs: {str(e)}")
-            matched_jobs = []
-
-        # ----------------------------------------
-        # Step 2: Search and Match Jobs via Backend
-        # ----------------------------------------
-        tracker.update(4, f"Matching {num_jobs_to_search} jobs with your profile...")
-        _websocket_keepalive("Matching jobs")
-
-        try:
             matched_jobs = backend.search_and_match_jobs(
                 resume_data=resume_data,
                 ai_analysis=ai_analysis,
-                num_jobs=num_jobs_to_search
+                num_jobs=num_jobs_to_search,
+                search_keywords=search_keywords,
+                location=location_preference
             )
+            
             tracker.update(5, "Search complete!")
             _websocket_keepalive("Complete")
+            
+            # Better error feedback for users
+            if not matched_jobs:
+                st.warning(
+                    "⚠️ **No jobs found.** This could be due to:\n\n"
+                    "• **Rate limit**: RapidAPI free tier has limited requests. Wait a few minutes.\n"
+                    "• **Search terms**: Try broader keywords in your profile.\n"
+                    "• **Location**: Try a different location preference.\n"
+                    "• **API issues**: Check if your RapidAPI key is valid."
+                )
         except Exception as e:
-            st.error(f"❌ Unexpected error while searching jobs: {str(e)}")
-            st.stop()
+            st.error(
+                f"❌ **Search failed:** {str(e)}\n\n"
+                "**Troubleshooting:**\n"
+                "• Check your internet connection\n"
+                "• Verify RapidAPI key is configured correctly\n"
+                "• Try again in a few minutes if rate limited"
+            )
+            matched_jobs = []
 
         # ----------------------------------------
         # 📊 STEP 3: Display Results

@@ -46,11 +46,15 @@ def _get_config_float(key, default, minimum=0.0):
     return _coerce_positive_float(candidate, default, minimum)
 
 
-# Configuration constants
-DEFAULT_EMBEDDING_BATCH_SIZE = _get_config_int("EMBEDDING_BATCH_SIZE", 15, minimum=5)
-DEFAULT_MAX_JOBS_TO_INDEX = _get_config_int("MAX_JOBS_TO_INDEX", 25, minimum=10)
-EMBEDDING_BATCH_DELAY = _get_config_float("EMBEDDING_BATCH_DELAY", 0.5, minimum=0.0)
+# Configuration constants - Optimized for performance
+# Batch size increased from 15 to 20 for fewer API calls
+DEFAULT_EMBEDDING_BATCH_SIZE = _get_config_int("EMBEDDING_BATCH_SIZE", 20, minimum=5)
+# Max jobs reduced from 25 to 15 for faster default searches
+DEFAULT_MAX_JOBS_TO_INDEX = _get_config_int("MAX_JOBS_TO_INDEX", 15, minimum=10)
+# Batch delay reduced from 0.5s to 0.2s for faster processing
+EMBEDDING_BATCH_DELAY = _get_config_float("EMBEDDING_BATCH_DELAY", 0.2, minimum=0.0)
 RAPIDAPI_MAX_REQUESTS_PER_MINUTE = _get_config_int("RAPIDAPI_MAX_REQUESTS_PER_MINUTE", 3, minimum=1)
+# Pass 2 disabled by default - will be run lazily before resume generation
 ENABLE_PROFILE_PASS2 = os.getenv("ENABLE_PROFILE_PASS2", "false").lower() in ("true", "1", "yes")
 USE_FAST_SKILL_MATCHING = os.getenv("USE_FAST_SKILL_MATCHING", "true").lower() in ("true", "1", "yes")
 

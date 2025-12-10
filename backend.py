@@ -1894,15 +1894,23 @@ class JobSeekerBackend:
         
         return resume_data, ai_analysis
     
-    def search_and_match_jobs(self, resume_data: Dict, ai_analysis: Dict, num_jobs: int = 30) -> List[Dict]:
-        """Search for jobs GLOBALLY and rank by match quality"""
+    def search_and_match_jobs(self, resume_data: Dict, ai_analysis: Dict, num_jobs: int = 30, 
+                               search_keywords: str = None, location: str = None) -> List[Dict]:
+        """Search for jobs and rank by match quality.
         
-        # Use simplified search query
-        search_query = ai_analysis.get('primary_role', 'Professional')
-        location = "United States"
+        Args:
+            resume_data: Parsed resume data
+            ai_analysis: AI-extracted skills and role analysis
+            num_jobs: Number of jobs to search for
+            search_keywords: Search keywords (if None, uses ai_analysis primary_role)
+            location: Location preference (if None, defaults to Hong Kong)
+        """
+        # Use provided keywords or fall back to AI-detected role
+        search_query = search_keywords if search_keywords else ai_analysis.get('primary_role', 'Professional')
+        location = location if location else "Hong Kong"
         
         print(f"\n{'='*60}")
-        print(f"🌍 SEARCHING JOBS GLOBALLY")
+        print(f"🔍 SEARCHING JOBS")
         print(f"{'='*60}")
         print(f"🔍 Search Query: {search_query}")
         print(f"📍 Location: {location}")
