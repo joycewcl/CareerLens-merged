@@ -2497,22 +2497,24 @@ st.sidebar.markdown("---")
 
 # Job Seeker Section
 st.sidebar.markdown('<div class="nav-section-header">👤 Job Seeker</div>', unsafe_allow_html=True)
-if st.sidebar.button("• Job Matching", use_container_width=True, key="job_matching_btn"):
+if st.sidebar.button("🏠 Job Seeker", use_container_width=True, key="main_btn"):
+    st.session_state.current_page = "main"
+if st.sidebar.button("💼 Job Matching", use_container_width=True, key="job_matching_btn"):
     st.session_state.current_page = "job_recommendations"
-if st.sidebar.button("• AI Powered Tailored Resume", use_container_width=True, key="tailored_resume_btn"):
+if st.sidebar.button("📝 AI Powered Tailored Resume", use_container_width=True, key="tailored_resume_btn"):
     st.session_state.current_page = "tailored_resume"
-if st.sidebar.button("• AI Mock Interview", use_container_width=True, key="ai_interview_btn"):
+if st.sidebar.button("🤖 AI Mock Interview", use_container_width=True, key="ai_interview_btn"):
     st.session_state.current_page = "ai_interview"
-if st.sidebar.button("• Market Dashboard", use_container_width=True, key="market_dashboard_btn"):
+if st.sidebar.button("📊 Market Dashboard", use_container_width=True, key="market_dashboard_btn"):
     st.session_state.current_page = "market_dashboard"
 
 st.sidebar.markdown("---")
 
 # Recruiter Section
 st.sidebar.markdown('<div class="nav-section-header">🎯 Recruiter</div>', unsafe_allow_html=True)
-if st.sidebar.button("• Job Posting", use_container_width=True, key="job_posting_btn"):
+if st.sidebar.button("📋 Job Posting", use_container_width=True, key="job_posting_btn"):
     st.session_state.current_page = "head_hunter"
-if st.sidebar.button("• Recruitment Match", use_container_width=True, key="recruitment_match_btn"):
+if st.sidebar.button("🔍 Recruitment Match", use_container_width=True, key="recruitment_match_btn"):
     st.session_state.current_page = "recruitment_match"
 
 st.sidebar.markdown("---")
@@ -2608,6 +2610,7 @@ st.sidebar.markdown("""
 ### 💡 Usage Instructions
 
 **For Job Seekers:**
+- **Job Seeker**: Upload your CV and fill in your profile
 - **Job Matching**: Find AI-matched positions based on your profile
 - **AI Powered Tailored Resume**: Generate job-specific resumes
 - **AI Mock Interview**: Practice with AI-powered mock interviews
