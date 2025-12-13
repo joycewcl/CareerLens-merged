@@ -35,8 +35,8 @@ def _load_logo():
                 _logo_html = f'<img src="data:image/png;base64,{logo_base64}" class="hero-bg-logo">'
                 return _logo_html
             except (IOError, OSError) as e:
-                # Image file exists but couldn't be read - log and continue to next logo
-                logger.warning(f"Failed to read logo file {logo_path}: {e}")
+                # Failed to load logo file - log and continue to next logo
+                logger.warning(f"Failed to load logo file {logo_path}: {e}")
                 continue
     
     # No logo files found or all failed to load - use CSS-only fallback
@@ -104,6 +104,10 @@ def render_styles():
             
             /* UI Elements */
             --accent-gradient: linear-gradient(135deg, #00D2FF 0%, #0084C2 100%);
+            
+            /* Logo Styling */
+            --logo-font-size: 60px;
+            --logo-opacity: 0.15;
             
             /* Legacy aliases for backwards compatibility */
             --navy: var(--bg-primary);
@@ -234,12 +238,12 @@ def render_styles():
         .hero-logo-initials {{
             font-family: 'Montserrat', sans-serif;
             font-weight: 700;
-            font-size: 60px;
+            font-size: var(--logo-font-size);
             background: var(--accent-gradient);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            opacity: 0.15;
+            opacity: var(--logo-opacity);
         }}
         
         .dashboard-metric-card {{
