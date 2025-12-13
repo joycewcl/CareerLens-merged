@@ -18,9 +18,6 @@ def render_sidebar():
     """Render CareerLens sidebar with resume upload, market filters, and analyze button"""
     with st.sidebar:
         st.markdown("""
-        <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Montserrat:wght@400;700&display=swap');
-        </style>
         <div style="margin-bottom: 2rem;">
             <h2 style="color: white !important; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; font-family: 'Montserrat', sans-serif; font-size: 2rem; font-weight: 700; letter-spacing: -1px; text-align: center; justify-content: center;">
                 <span style="color: #0084C2;">Career</span><span style="color: #00D2FF;">Lens</span>

@@ -103,6 +103,7 @@ def render_styles():
             --error-red: #EF4444;
             --navy-deep: #1e3a5f;
             --navy-light: #2C3E50;
+            --btn-text: #0a0a0a;
         }}
         
         [data-theme="dark"],
@@ -151,7 +152,7 @@ def render_styles():
         }}
         [data-testid="stSidebar"] .stButton > button {{
             background: linear-gradient(90deg, var(--brand-core) 0%, var(--brand-glow) 100%);
-            color: #000 !important;
+            color: var(--btn-text) !important;
             font-family: 'Montserrat', sans-serif;
             font-weight: 700 !important;
             border: none;

@@ -692,7 +692,7 @@ def create_job_comparison_radar(matched_jobs: List[Dict]):
 
 # Page config
 st.set_page_config(
-    page_title="CareerLens - AI Career Copilot",
+    page_title="CareerLens",
     page_icon="🔍",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -883,7 +883,6 @@ def main_analyzer_page():
     """Main Page - CareerLens"""
     st.markdown("""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Montserrat:wght@400;700&display=swap');
         .main-title {
             font-family: 'Montserrat', sans-serif;
             font-size: 3rem;
@@ -893,15 +892,23 @@ def main_analyzer_page():
             margin-bottom: 1rem;
         }
         .main-title .brand-span {
-            color: #0084C2;
+            color: var(--brand-core);
         }
         .main-title .lens-span {
-            color: #00D2FF;
+            color: var(--brand-glow);
+        }
+        .main-tagline {
+            text-align: center;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
         }
     </style>
     <h1 class="main-title"><span class="brand-span">Career</span><span class="lens-span">Lens</span></h1>
+    <p class="main-tagline">AI Career Copilot • Hong Kong</p>
     """, unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #94A3B8; text-transform: uppercase; letter-spacing: 2px; font-size: 0.9rem; margin-bottom: 2rem;'>AI Career Copilot • Hong Kong</p>", unsafe_allow_html=True)
     st.markdown("Upload your CV and let **GPT-4** find matching jobs globally, ranked by match quality!")
 
     # Define helper functions
