@@ -2446,14 +2446,14 @@ st.sidebar.markdown("""
         letter-spacing: -1px;
     }
     .careerlens-logo .brand-span {
-        color: #0084C2;
+        color: var(--brand-core);
     }
     .careerlens-logo .lens-span {
-        color: #00D2FF;
+        color: var(--brand-glow);
     }
     .careerlens-tagline {
         font-family: 'Montserrat', sans-serif;
-        color: #94A3B8;
+        color: var(--text-secondary);
         text-transform: uppercase;
         letter-spacing: 2px;
         font-size: 0.7rem;

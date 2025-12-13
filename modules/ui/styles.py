@@ -95,7 +95,6 @@ def render_styles():
             --bg-container: #F4F7FC;
             --card-bg: #FFFFFF;
             --text-primary: #161616;
-            --text-muted: #161616;
             --border-color: #E0E0E0;
             --hover-bg: #F0F0F0;
             --success-green: #10B981;
@@ -115,8 +114,6 @@ def render_styles():
             --bg-container: #262626;
             --card-bg: #262626;
             --text-primary: #F4F4F4;
-            --text-secondary: #F4F4F4;
-            --text-muted: #F4F4F4;
             --border-color: #3D3D3D;
             --hover-bg: #333333;
             --navy: #1e293b;
