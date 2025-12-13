@@ -46,12 +46,32 @@ An AI-powered career intelligence platform built with Streamlit, combining job m
 
 ## 🔧 How to Run
 
-1. Install the requirements:
+### Prerequisites
+- Python 3.8 or higher
+- pip package manager
+
+### Installation Steps
+
+1. **Install the requirements:**
    ```bash
    pip install -r requirements.txt
    ```
+   
+   This will install all necessary dependencies including:
+   - `streamlit` - Web framework
+   - `pandas`, `numpy` - Data processing
+   - `matplotlib`, `plotly` - Visualizations
+   - `openai` - AI integration
+   - And all other required packages
 
-2. Configure secrets (create `.streamlit/secrets.toml`):
+   **Verify installation:**
+   ```bash
+   python verify_setup.py
+   ```
+   
+   This script checks that all dependencies are installed correctly.
+
+2. **Configure secrets** (create `.streamlit/secrets.toml`):
    ```toml
    AZURE_OPENAI_API_KEY = "your-key"
    AZURE_OPENAI_ENDPOINT = "your-endpoint"
@@ -59,10 +79,24 @@ An AI-powered career intelligence platform built with Streamlit, combining job m
    RAPIDAPI_KEY = "your-key"
    ```
 
-3. Run the app:
+3. **Run the app:**
    ```bash
    streamlit run streamlit_app.py
    ```
+
+### Troubleshooting
+
+**Import Errors (ModuleNotFoundError):**
+If you encounter import errors for `streamlit`, `pandas`, `matplotlib`, `plotly`, or `numpy`, ensure you've run:
+```bash
+pip install -r requirements.txt
+```
+
+**Python Version:**
+Verify you're using Python 3.8+:
+```bash
+python --version
+```
 
 ## 📦 Key Dependencies
 
@@ -75,6 +109,22 @@ An AI-powered career intelligence platform built with Streamlit, combining job m
 - `reportlab` - PDF generation
 - `python-docx` - DOCX generation
 - `PyPDF2` - PDF parsing
+
+## 🔍 Setup Verification
+
+After installing dependencies, run the verification script to ensure everything is configured correctly:
+
+```bash
+python verify_setup.py
+```
+
+This script will:
+- ✅ Check Python version compatibility
+- ✅ Verify all required modules are installed
+- ✅ Confirm application files exist
+- ✅ Test for syntax errors in the main application
+
+If all checks pass, you're ready to run the application!
 
 ## ⚡ Streamlit Cloud Optimizations
 
