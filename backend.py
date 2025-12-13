@@ -2531,10 +2531,15 @@ def initialize_interview_session(job_data):
 def generate_interview_question(job_data, seeker_profile, previous_qa=None):
     """Generate interview questions using Azure OpenAI"""
     try:
+        # Check if API keys are configured
+        is_configured, error_msg = Config.check_azure_credentials()
+        if not is_configured:
+            return f"Error: {error_msg}"
+        
         client = AzureOpenAI(
-            azure_endpoint="https://hkust.azure-api.net",
-            api_version="2024-10-21",
-            api_key="7b567f8243bc4985a4e1f870092a3e60"
+            azure_endpoint=Config.AZURE_ENDPOINT,
+            api_key=Config.AZURE_API_KEY,
+            api_version=Config.AZURE_API_VERSION
         )
 
         # Prepare position information
@@ -2625,10 +2630,15 @@ Please only return the question content, without additional explanations.
 def evaluate_answer(question, answer, job_data):
     """Evaluate job seeker's answer"""
     try:
+        # Check if API keys are configured
+        is_configured, error_msg = Config.check_azure_credentials()
+        if not is_configured:
+            return f'{{"error": "{error_msg}"}}'
+        
         client = AzureOpenAI(
-            azure_endpoint="https://hkust.azure-api.net",
-            api_version="2024-10-21",
-            api_key="7b567f8243bc4985a4e1f870092a3e60"
+            azure_endpoint=Config.AZURE_ENDPOINT,
+            api_key=Config.AZURE_API_KEY,
+            api_version=Config.AZURE_API_VERSION
         )
 
         prompt = f"""
@@ -2684,10 +2694,15 @@ Please return evaluation results in the following JSON format:
 def generate_final_summary(interview_data, job_data):
     """Generate final interview summary"""
     try:
+        # Check if API keys are configured
+        is_configured, error_msg = Config.check_azure_credentials()
+        if not is_configured:
+            return f'{{"error": "{error_msg}"}}'
+        
         client = AzureOpenAI(
-            azure_endpoint="https://hkust.azure-api.net",
-            api_version="2024-10-21",
-            api_key="7b567f8243bc4985a4e1f870092a3e60"
+            azure_endpoint=Config.AZURE_ENDPOINT,
+            api_key=Config.AZURE_API_KEY,
+            api_version=Config.AZURE_API_VERSION
         )
 
         # Prepare all Q&A records
