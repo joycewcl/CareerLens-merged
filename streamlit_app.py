@@ -692,12 +692,12 @@ def create_job_comparison_radar(matched_jobs: List[Dict]):
 
 # Page config
 st.set_page_config(
-    page_title="CareerLens",
+    page_title="CareerLens - AI Career Copilot",
     page_icon="🔍",
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
-        'About': "CareerLens - AI-powered career intelligence platform"
+        'About': "CareerLens - AI Career Intelligence Platform • Hong Kong"
     }
 )
 
@@ -881,7 +881,27 @@ except Exception:
 # APP UI
 def main_analyzer_page():
     """Main Page - CareerLens"""
-    st.title("🔍 CareerLens")
+    st.markdown("""
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Montserrat:wght@400;700&display=swap');
+        .main-title {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 3rem;
+            font-weight: 700;
+            letter-spacing: -1px;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        .main-title .brand-span {
+            color: #0084C2;
+        }
+        .main-title .lens-span {
+            color: #00D2FF;
+        }
+    </style>
+    <h1 class="main-title"><span class="brand-span">Career</span><span class="lens-span">Lens</span></h1>
+    """, unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #94A3B8; text-transform: uppercase; letter-spacing: 2px; font-size: 0.9rem; margin-bottom: 2rem;'>AI Career Copilot • Hong Kong</p>", unsafe_allow_html=True)
     st.markdown("Upload your CV and let **GPT-4** find matching jobs globally, ranked by match quality!")
 
     # Define helper functions
@@ -2406,9 +2426,92 @@ def market_dashboard_page():
         3. The application logs for more details
         """)
 
-# Add CareerLens tools in sidebar
+# Sidebar navigation with new design
+st.sidebar.markdown("""
+<style>
+    /* CareerLens Logo and Branding */
+    .careerlens-logo {
+        font-family: 'Montserrat', sans-serif;
+        font-size: 2rem;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 0.5rem;
+        letter-spacing: -1px;
+    }
+    .careerlens-logo .brand-span {
+        color: #0084C2;
+    }
+    .careerlens-logo .lens-span {
+        color: #00D2FF;
+    }
+    .careerlens-tagline {
+        font-family: 'Montserrat', sans-serif;
+        color: #94A3B8;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        font-size: 0.7rem;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    /* Navigation Section Headers */
+    .nav-section-header {
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: white !important;
+        margin-top: 1.5rem;
+        margin-bottom: 0.5rem;
+        padding-left: 0.5rem;
+        border-left: 3px solid #00D2FF;
+    }
+    
+    /* Navigation Items */
+    .nav-item {
+        font-family: 'Inter', sans-serif;
+        color: #94A3B8 !important;
+        font-size: 0.9rem;
+        padding-left: 1.5rem;
+        margin: 0.3rem 0;
+        cursor: pointer;
+    }
+    .nav-item:hover {
+        color: #00D2FF !important;
+    }
+</style>
+
+<div class="careerlens-logo">
+    <span class="brand-span">Career</span><span class="lens-span">Lens</span>
+</div>
+<div class="careerlens-tagline">AI Career Copilot • Hong Kong</div>
+""", unsafe_allow_html=True)
+
+st.sidebar.markdown("---")
+
+# Job Seeker Section
+st.sidebar.markdown('<div class="nav-section-header">👤 Job Seeker</div>', unsafe_allow_html=True)
+if st.sidebar.button("• Job Matching", use_container_width=True, key="job_matching_btn"):
+    st.session_state.current_page = "job_recommendations"
+if st.sidebar.button("• AI Powered Tailored Resume", use_container_width=True, key="tailored_resume_btn"):
+    st.session_state.current_page = "tailored_resume"
+if st.sidebar.button("• AI Mock Interview", use_container_width=True, key="ai_interview_btn"):
+    st.session_state.current_page = "ai_interview"
+if st.sidebar.button("• Market Dashboard", use_container_width=True, key="market_dashboard_btn"):
+    st.session_state.current_page = "market_dashboard"
+
+st.sidebar.markdown("---")
+
+# Recruiter Section
+st.sidebar.markdown('<div class="nav-section-header">🎯 Recruiter</div>', unsafe_allow_html=True)
+if st.sidebar.button("• Job Posting", use_container_width=True, key="job_posting_btn"):
+    st.session_state.current_page = "head_hunter"
+if st.sidebar.button("• Recruitment Match", use_container_width=True, key="recruitment_match_btn"):
+    st.session_state.current_page = "recruitment_match"
+
+st.sidebar.markdown("---")
+
+# Add CareerLens tools
 with st.sidebar:
-    st.markdown("---")
     st.subheader("🔍 CareerLens Tools")
     
     # Display domain filter
@@ -2461,25 +2564,6 @@ with st.sidebar:
     if current_id:
         st.info(f"Current Session ID: **{current_id}**")
 
-# Sidebar navigation
-st.sidebar.title("🔍 Navigation")
-
-# Navigation buttons (ordered: 1-2-5-6-3-4)
-if st.sidebar.button("🏠 Job Seeker", use_container_width=True, key="main_btn"):
-    st.session_state.current_page = "main"
-if st.sidebar.button("💼 Job Match", use_container_width=True):
-    st.session_state.current_page = "job_recommendations"
-if st.sidebar.button("📝 AI-powered Tailored Resume", use_container_width=True):
-    st.session_state.current_page = "tailored_resume"
-if st.sidebar.button("🤖 AI Interview", use_container_width=True):
-    st.session_state.current_page = "ai_interview"
-if st.sidebar.button("📊 Market Dashboard", use_container_width=True):
-    st.session_state.current_page = "market_dashboard"
-if st.sidebar.button("🎯 Recruiter", use_container_width=True):
-    st.session_state.current_page = "head_hunter"
-if st.sidebar.button("🔍 Recruitment Match", use_container_width=True):
-    st.session_state.current_page = "recruitment_match"
-
 # Page routing
 if st.session_state.current_page == "main":
     main_analyzer_page()
@@ -2516,13 +2600,15 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("""
 ### 💡 Usage Instructions
 
-1. **Job Seeker**: Fill information → Automatic job recommendations
-2. **Job Match**: View AI-matched positions
-3. **AI-powered Tailored Resume**: Generate job-specific resumes with AI
-4. **AI Interview**: Mock interviews and skill assessment
-5. **Market Dashboard**: CareerLens modular dashboard view
-6. **Recruiter**: Publish and manage recruitment positions
-7. **Recruitment Match**: Smart candidate-position matching
+**For Job Seekers:**
+- **Job Matching**: Find AI-matched positions based on your profile
+- **AI Powered Tailored Resume**: Generate job-specific resumes
+- **AI Mock Interview**: Practice with AI-powered mock interviews
+- **Market Dashboard**: View comprehensive market insights
+
+**For Recruiters:**
+- **Job Posting**: Publish and manage job openings
+- **Recruitment Match**: Smart candidate-position matching
 """)
                     
 # Footer

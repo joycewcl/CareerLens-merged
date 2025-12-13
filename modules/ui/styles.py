@@ -76,18 +76,25 @@ def render_styles():
     """Render all CSS styles and JavaScript for the application"""
     st.markdown("""
     <style>
+        /* Import Google Fonts for CareerLens branding */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Montserrat:wght@400;700&display=swap');
+        
         /* CareerLens Design System - CSS Variables */
         :root {{
+            --bg-primary: #0F172A;
+            --text-primary-light: #FFFFFF;
+            --text-secondary: #94A3B8;
+            --brand-glow: #00D2FF;
+            --brand-core: #0084C2;
             --navy: #0f172a;
             --cyan: #00d2ff;
             --bg-gray: #f3f4f6;
-            --primary-accent: #0F62FE;
-            --action-accent: #0F62FE;
+            --primary-accent: #0084C2;
+            --action-accent: #00D2FF;
             --bg-main: #f3f4f6;
             --bg-container: #F4F7FC;
             --card-bg: #FFFFFF;
             --text-primary: #161616;
-            --text-secondary: #161616;
             --text-muted: #161616;
             --border-color: #E0E0E0;
             --hover-bg: #F0F0F0;
@@ -127,26 +134,33 @@ def render_styles():
         }}
         
         [data-testid="stSidebar"] {{
-            background-color: var(--navy);
+            background-color: var(--bg-primary);
             padding: 2rem 1rem;
         }}
         [data-testid="stSidebar"] * {{
-            color: #94a3b8 !important;
+            color: var(--text-secondary) !important;
+            font-family: 'Inter', sans-serif;
         }}
         [data-testid="stSidebar"] h1,
         [data-testid="stSidebar"] h2,
         [data-testid="stSidebar"] h3,
         [data-testid="stSidebar"] .stMarkdown h2,
         [data-testid="stSidebar"] .stMarkdown h3 {{
-            color: white !important;
+            color: var(--text-primary-light) !important;
+            font-family: 'Montserrat', sans-serif;
         }}
         [data-testid="stSidebar"] .stButton > button {{
-            background-color: var(--cyan) !important;
-            color: var(--navy) !important;
-            font-weight: 600 !important;
+            background: linear-gradient(90deg, var(--brand-core) 0%, var(--brand-glow) 100%);
+            color: #000 !important;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700 !important;
+            border: none;
+            border-radius: 50px;
+            box-shadow: 0 0 20px rgba(0, 210, 255, 0.4);
         }}
         [data-testid="stSidebar"] .stButton > button:hover {{
-            background-color: #06b6d4 !important;
+            box-shadow: 0 0 30px rgba(0, 210, 255, 0.6);
+            transform: translateY(-2px);
         }}
         
         .hero-container {{
