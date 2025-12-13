@@ -416,6 +416,25 @@ def render_styles():
         [data-theme="dark"] .step-box {{
             background: var(--bg-container);
         }}
+        
+        /* Info Banner */
+        .info-banner {{
+            background: var(--accent-gradient);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            color: white;
+        }}
+        
+        .info-banner h3 {{
+            margin: 0;
+            color: white;
+        }}
+        
+        .info-banner p {{
+            margin: 0.5rem 0 0 0;
+            opacity: 0.9;
+        }}
     </style>
     <div id="ws-reconnecting-overlay" class="ws-reconnecting-overlay">
         <div class="ws-reconnecting-content">
