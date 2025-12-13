@@ -34,7 +34,6 @@ def _load_logo():
             except (IOError, OSError) as e:
                 # Image file exists but couldn't be read - log and continue to fallback
                 logger.warning(f"Failed to read logo file {logo_path}: {e}")
-                pass
     
     # No logo files found or all failed to load - use CSS-only fallback
     _logo_html = '<div class="hero-bg-logo hero-bg-logo-text"><span class="hero-logo-initials">CL</span></div>'
