@@ -81,12 +81,20 @@ def render_styles():
         
         /* CareerLens Design System - CSS Variables */
         :root {{
-            /* Brand Colors */
-            --bg-primary: #0F172A;
+            /* Backgrounds */
+            --bg-primary: #0F172A;   /* Deep Midnight Navy */
+            --bg-secondary: #1E293B; /* Slightly lighter navy for cards/sections */
+
+            /* Text */
             --text-primary-light: #FFFFFF;
-            --text-secondary: #94A3B8;
-            --brand-glow: #00D2FF;
-            --brand-core: #0084C2;
+            --text-secondary: #94A3B8; /* Muted grey-blue for subtitles */
+
+            /* Brand Colors */
+            --brand-glow: #00D2FF;   /* The bright cyan highlight */
+            --brand-core: #0084C2;   /* The standard logo blue */
+            
+            /* UI Elements */
+            --accent-gradient: linear-gradient(135deg, #00D2FF 0%, #0084C2 100%);
             
             /* Legacy aliases for backwards compatibility */
             --navy: var(--bg-primary);
@@ -153,8 +161,8 @@ def render_styles():
             font-family: 'Montserrat', sans-serif;
         }}
         [data-testid="stSidebar"] .stButton > button {{
-            background: linear-gradient(90deg, var(--brand-core) 0%, var(--brand-glow) 100%);
-            color: var(--btn-text) !important;
+            background: var(--accent-gradient);
+            color: #FFFFFF !important;
             font-family: 'Montserrat', sans-serif;
             font-weight: 700 !important;
             border: none;
@@ -167,7 +175,7 @@ def render_styles():
         }}
         
         .hero-container {{
-            background: linear-gradient(135deg, var(--navy) 0%, #112545 100%);
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
             padding: 40px;
             border-radius: 12px;
             color: white;
@@ -191,7 +199,7 @@ def render_styles():
             color: white;
         }}
         .hero-subtitle {{
-            color: #94a3b8;
+            color: var(--text-secondary);
             font-size: 16px;
             margin-top: 10px;
         }}
@@ -227,7 +235,7 @@ def render_styles():
         }}
         
         [data-theme="dark"] .hero-container {{
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
         }}
         [data-theme="dark"] .dashboard-metric-card {{
             background: var(--card-bg);
@@ -250,7 +258,7 @@ def render_styles():
         }}
         
         .match-score {{
-            background-color: var(--action-accent);
+            background: var(--accent-gradient);
             color: white;
             padding: 0.4rem 1rem;
             border-radius: 20px;
@@ -273,14 +281,17 @@ def render_styles():
         .match-score-display {{
             font-size: 2rem;
             font-weight: bold;
-            color: var(--action-accent);
+            color: var(--brand-glow);
             text-align: center;
         }}
         
         .main-header {{
             font-size: 3rem;
             font-weight: bold;
-            color: var(--primary-accent);
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             text-align: center;
             margin-bottom: 1rem;
             letter-spacing: -0.02em;
@@ -342,6 +353,87 @@ def render_styles():
         }}
         [data-theme="dark"] .ws-reconnecting-subtext {{
             color: #999;
+        }}
+        
+        /* How It Works Page Styles */
+        .how-it-works-section {{
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin: 1rem 0;
+            border-left: 4px solid var(--brand-glow);
+        }}
+        
+        .step-box {{
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 12px;
+            margin: 1.5rem 0;
+            border: 2px solid var(--brand-core);
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }}
+        
+        .step-box h3 {{
+            color: var(--brand-glow);
+            margin-top: 0;
+        }}
+        
+        .step-box h4 {{
+            color: var(--brand-core);
+            margin-top: 1.5rem;
+        }}
+        
+        .step-box code {{
+            background: var(--bg-container);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }}
+        
+        .step-box pre {{
+            background: var(--bg-container);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            border-left: 3px solid var(--brand-glow);
+        }}
+        
+        .tech-badge {{
+            display: inline-block;
+            background: var(--accent-gradient);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            margin: 0.3rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }}
+        
+        [data-theme="dark"] .how-it-works-section {{
+            background: var(--bg-container);
+        }}
+        
+        [data-theme="dark"] .step-box {{
+            background: var(--bg-container);
+        }}
+        
+        /* Info Banner */
+        .info-banner {{
+            background: var(--accent-gradient);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            color: white;
+        }}
+        
+        .info-banner h3 {{
+            margin: 0;
+            color: white;
+        }}
+        
+        .info-banner p {{
+            margin: 0.5rem 0 0 0;
+            opacity: 0.9;
         }}
     </style>
     <div id="ws-reconnecting-overlay" class="ws-reconnecting-overlay">
