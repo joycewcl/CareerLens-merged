@@ -2,6 +2,7 @@
 import json
 import os
 import textwrap
+import logging
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -9,6 +10,12 @@ import streamlit.components.v1 as components
 # Lazy load logo - only when needed
 _logo_html = None
 _logo_loaded = False
+
+# Set up logger for this module
+logger = logging.getLogger(__name__)
+
+# Logo configuration
+LOGO_INITIALS = "CL"  # CareerLens initials for CSS-only fallback
 
 
 def _load_logo():
@@ -27,11 +34,13 @@ def _load_logo():
                 logo_base64 = get_img_as_base64(logo_path)
                 _logo_html = f'<img src="data:image/png;base64,{logo_base64}" class="hero-bg-logo">'
                 return _logo_html
-            except Exception:
-                _logo_html = '<div class="hero-bg-logo"></div>'
-                return _logo_html
+            except (IOError, OSError) as e:
+                # Failed to load logo file - log and continue to next logo
+                logger.warning(f"Failed to load logo file {logo_path}: {e}")
+                continue
     
-    _logo_html = '<div class="hero-bg-logo"></div>'
+    # No logo files found or all failed to load - use CSS-only fallback
+    _logo_html = f'<div class="hero-bg-logo hero-bg-logo-text"><span class="hero-logo-initials">{LOGO_INITIALS}</span></div>'
     return _logo_html
 
 
@@ -96,6 +105,10 @@ def render_styles():
             /* UI Elements */
             --accent-gradient: linear-gradient(135deg, #00D2FF 0%, #0084C2 100%);
             
+            /* Logo Styling */
+            --logo-font-size: 60px;
+            --logo-opacity: 0.15;
+            
             /* Legacy aliases for backwards compatibility */
             --navy: var(--bg-primary);
             --cyan: var(--brand-glow);
@@ -121,8 +134,8 @@ def render_styles():
         [data-theme="dark"],
         html[data-theme="dark"],
         html[data-theme="dark"] :root {{
-            --primary-accent: #4589FF;
-            --action-accent: #4589FF;
+            --primary-accent: #00D2FF;
+            --action-accent: #00D2FF;
             --bg-main: #161616;
             --bg-container: #262626;
             --card-bg: #262626;
@@ -212,6 +225,25 @@ def render_styles():
             transform: rotate(-15deg);
             pointer-events: none;
             z-index: 5;
+        }}
+        .hero-bg-logo-text {{
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 150px;
+            height: 150px;
+            right: 20px;
+            top: 20px;
+        }}
+        .hero-logo-initials {{
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: var(--logo-font-size);
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            opacity: var(--logo-opacity);
         }}
         
         .dashboard-metric-card {{
@@ -331,7 +363,7 @@ def render_styles():
             width: 40px;
             height: 40px;
             border: 4px solid #e0e0e0;
-            border-top-color: #0F62FE;
+            border-top-color: var(--brand-glow);
             border-radius: 50%;
             animation: ws-spin 1s linear infinite;
             margin: 0 auto 15px;
