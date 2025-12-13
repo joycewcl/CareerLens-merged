@@ -114,15 +114,34 @@ class Config(metaclass=_ConfigMeta):
         
         if missing:
             print(f"⚠️ Missing secrets: {', '.join(missing)}")
-            print(f"")
+            print()
             print(f"💡 Please configure these secrets:")
             print(f"   1. In Streamlit Cloud: Go to App Settings → Secrets")
             print(f"   2. Locally: Create .streamlit/secrets.toml file")
             print(f"   3. Add these keys:")
             for secret in missing:
                 print(f"      {secret} = \"your-key-here\"")
-            print(f"")
+            print()
             return False
         
         print("✅ Configuration validated")
         return True
+    
+    @staticmethod
+    def check_azure_credentials():
+        """Check if Azure OpenAI credentials are configured.
+        
+        Returns:
+            tuple: (is_configured: bool, error_message: str or None)
+        """
+        missing = []
+        if not Config.get_azure_api_key():
+            missing.append("AZURE_OPENAI_API_KEY")
+        if not Config.get_azure_endpoint():
+            missing.append("AZURE_OPENAI_ENDPOINT")
+        
+        if missing:
+            error_msg = f"Missing required secrets: {', '.join(missing)}. Please configure these in your Streamlit secrets."
+            return False, error_msg
+        
+        return True, None

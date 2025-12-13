@@ -288,7 +288,8 @@ def extract_salary_from_text(text):
     
     try:
         # Check if API keys are configured - if not, fall back to regex
-        if not Config.AZURE_API_KEY or not Config.AZURE_ENDPOINT:
+        is_configured, _ = Config.check_azure_credentials()
+        if not is_configured:
             return extract_salary_from_text_regex(text)
         
         client = AzureOpenAI(
@@ -1148,13 +1149,8 @@ def extract_structured_profile(resume_text, enable_verification=False):
     """Extract structured profile from resume with optional two-pass verification (from CareerLens)"""
     try:
         # Check if API keys are configured
-        if not Config.AZURE_API_KEY or not Config.AZURE_ENDPOINT:
-            missing = []
-            if not Config.AZURE_API_KEY:
-                missing.append("AZURE_OPENAI_API_KEY")
-            if not Config.AZURE_ENDPOINT:
-                missing.append("AZURE_OPENAI_ENDPOINT")
-            error_msg = f"Missing required secrets: {', '.join(missing)}. Please configure these in your Streamlit secrets."
+        is_configured, error_msg = Config.check_azure_credentials()
+        if not is_configured:
             print(f"❌ Configuration Error: {error_msg}")
             return None
         
@@ -1263,13 +1259,8 @@ def generate_tailored_resume(user_profile, job_posting, raw_resume_text=None):
     """Generate a tailored resume based on user profile and job posting (from CareerLens)"""
     try:
         # Check if API keys are configured
-        if not Config.AZURE_API_KEY or not Config.AZURE_ENDPOINT:
-            missing = []
-            if not Config.AZURE_API_KEY:
-                missing.append("AZURE_OPENAI_API_KEY")
-            if not Config.AZURE_ENDPOINT:
-                missing.append("AZURE_OPENAI_ENDPOINT")
-            error_msg = f"Missing required secrets: {', '.join(missing)}. Please configure these in your Streamlit secrets."
+        is_configured, error_msg = Config.check_azure_credentials()
+        if not is_configured:
             print(f"❌ Configuration Error: {error_msg}")
             return None
         
@@ -1444,13 +1435,8 @@ Be thorough and creative!"""
 
         try:
             # Check if API keys are configured before attempting API call
-            if not Config.AZURE_API_KEY or not Config.AZURE_ENDPOINT:
-                missing = []
-                if not Config.AZURE_API_KEY:
-                    missing.append("AZURE_OPENAI_API_KEY")
-                if not Config.AZURE_ENDPOINT:
-                    missing.append("AZURE_OPENAI_ENDPOINT")
-                error_msg = f"Missing required secrets: {', '.join(missing)}. Please configure these in your Streamlit secrets."
+            is_configured, error_msg = Config.check_azure_credentials()
+            if not is_configured:
                 print(f"❌ Configuration Error: {error_msg}")
                 fallback = self._fallback_analysis()
                 fallback['_error'] = error_msg
