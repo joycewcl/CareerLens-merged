@@ -153,12 +153,12 @@ def render_styles():
         .stDeployButton {{display: none;}}
         
         .stApp {{
-            background-color: var(--bg-gray);
-            color: var(--text-primary);
+            background-color: var(--bg-primary);
+            color: var(--text-primary-light);
         }}
         
         [data-testid="stSidebar"] {{
-            background-color: var(--bg-primary);
+            background-color: var(--bg-secondary);
             padding: 2rem 1rem;
         }}
         [data-testid="stSidebar"] * {{

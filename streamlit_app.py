@@ -886,6 +886,27 @@ def main_analyzer_page():
     """Main Page - CareerLens"""
     st.markdown("""
     <style>
+        .main-logo-container {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .main-logo {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #00D2FF 0%, #0084C2 100%);
+            border-radius: 50%;
+            box-shadow: 0 0 30px rgba(0, 210, 255, 0.4);
+        }
+        .main-logo-text {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 3rem;
+            font-weight: 700;
+            color: #FFFFFF;
+        }
         .main-title {
             font-family: 'Montserrat', sans-serif;
             font-size: 3rem;
@@ -909,6 +930,11 @@ def main_analyzer_page():
             margin-bottom: 2rem;
         }
     </style>
+    <div class="main-logo-container">
+        <div class="main-logo">
+            <span class="main-logo-text">CL</span>
+        </div>
+    </div>
     <h1 class="main-title"><span class="brand-span">Career</span><span class="lens-span">Lens</span></h1>
     <p class="main-tagline">AI Career Copilot • Hong Kong</p>
     """, unsafe_allow_html=True)
