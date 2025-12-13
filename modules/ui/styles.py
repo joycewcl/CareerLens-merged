@@ -14,6 +14,9 @@ _logo_loaded = False
 # Set up logger for this module
 logger = logging.getLogger(__name__)
 
+# Logo configuration
+LOGO_INITIALS = "CL"  # CareerLens initials for CSS-only fallback
+
 
 def _load_logo():
     """Lazy load logo for hero banner"""
@@ -32,11 +35,12 @@ def _load_logo():
                 _logo_html = f'<img src="data:image/png;base64,{logo_base64}" class="hero-bg-logo">'
                 return _logo_html
             except (IOError, OSError) as e:
-                # Image file exists but couldn't be read - log and continue to fallback
+                # Image file exists but couldn't be read - log and continue to next logo
                 logger.warning(f"Failed to read logo file {logo_path}: {e}")
+                continue
     
     # No logo files found or all failed to load - use CSS-only fallback
-    _logo_html = '<div class="hero-bg-logo hero-bg-logo-text"><span class="hero-logo-initials">CL</span></div>'
+    _logo_html = f'<div class="hero-bg-logo hero-bg-logo-text"><span class="hero-logo-initials">{LOGO_INITIALS}</span></div>'
     return _logo_html
 
 
