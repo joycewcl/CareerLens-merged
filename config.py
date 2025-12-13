@@ -102,6 +102,14 @@ class Config(metaclass=_ConfigMeta):
         
         if missing:
             print(f"⚠️ Missing secrets: {', '.join(missing)}")
+            print(f"")
+            print(f"💡 Please configure these secrets:")
+            print(f"   1. In Streamlit Cloud: Go to App Settings → Secrets")
+            print(f"   2. Locally: Create .streamlit/secrets.toml file")
+            print(f"   3. Add these keys:")
+            for secret in missing:
+                print(f"      {secret} = \"your-key-here\"")
+            print(f"")
             return False
         
         print("✅ Configuration validated")

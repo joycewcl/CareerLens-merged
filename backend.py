@@ -287,6 +287,10 @@ def extract_salary_from_text(text):
     text_for_extraction = text[:3000] if len(text) > 3000 else text
     
     try:
+        # Check if API keys are configured - if not, fall back to regex
+        if not Config.AZURE_API_KEY or not Config.AZURE_ENDPOINT:
+            return extract_salary_from_text_regex(text)
+        
         client = AzureOpenAI(
             azure_endpoint=Config.AZURE_ENDPOINT,
             api_key=Config.AZURE_API_KEY,
@@ -1143,6 +1147,17 @@ def extract_relevant_resume_sections(resume_text):
 def extract_structured_profile(resume_text, enable_verification=False):
     """Extract structured profile from resume with optional two-pass verification (from CareerLens)"""
     try:
+        # Check if API keys are configured
+        if not Config.AZURE_API_KEY or not Config.AZURE_ENDPOINT:
+            missing = []
+            if not Config.AZURE_API_KEY:
+                missing.append("AZURE_OPENAI_API_KEY")
+            if not Config.AZURE_ENDPOINT:
+                missing.append("AZURE_OPENAI_ENDPOINT")
+            error_msg = f"Missing required secrets: {', '.join(missing)}. Please configure these in your Streamlit secrets."
+            print(f"❌ Configuration Error: {error_msg}")
+            return None
+        
         client = AzureOpenAI(
             azure_endpoint=Config.AZURE_ENDPOINT,
             api_key=Config.AZURE_API_KEY,
@@ -1247,6 +1262,17 @@ Return ONLY valid JSON, no additional text."""
 def generate_tailored_resume(user_profile, job_posting, raw_resume_text=None):
     """Generate a tailored resume based on user profile and job posting (from CareerLens)"""
     try:
+        # Check if API keys are configured
+        if not Config.AZURE_API_KEY or not Config.AZURE_ENDPOINT:
+            missing = []
+            if not Config.AZURE_API_KEY:
+                missing.append("AZURE_OPENAI_API_KEY")
+            if not Config.AZURE_ENDPOINT:
+                missing.append("AZURE_OPENAI_ENDPOINT")
+            error_msg = f"Missing required secrets: {', '.join(missing)}. Please configure these in your Streamlit secrets."
+            print(f"❌ Configuration Error: {error_msg}")
+            return None
+        
         client = AzureOpenAI(
             azure_endpoint=Config.AZURE_ENDPOINT,
             api_key=Config.AZURE_API_KEY,
@@ -1351,12 +1377,19 @@ class GPT4JobRoleDetector:
     """Use GPT-4 to detect job roles AND extract skills dynamically"""
     
     def __init__(self):
-        self.client = AzureOpenAI(
-            azure_endpoint=Config.AZURE_ENDPOINT,
-            api_key=Config.AZURE_API_KEY,
-            api_version=Config.AZURE_API_VERSION
-        )
+        self._client = None
         self.model = Config.AZURE_MODEL
+    
+    @property
+    def client(self):
+        """Lazy-load AzureOpenAI client only when needed"""
+        if self._client is None:
+            self._client = AzureOpenAI(
+                azure_endpoint=Config.AZURE_ENDPOINT,
+                api_key=Config.AZURE_API_KEY,
+                api_version=Config.AZURE_API_VERSION
+            )
+        return self._client
     
     def analyze_resume_for_job_roles(self, resume_data: Dict) -> Dict:
         """Analyze resume with GPT-4 - Extract ALL skills dynamically"""
@@ -1410,6 +1443,20 @@ For job search, provide SIMPLE terms that would work on LinkedIn/Indeed (not com
 Be thorough and creative!"""
 
         try:
+            # Check if API keys are configured before attempting API call
+            if not Config.AZURE_API_KEY or not Config.AZURE_ENDPOINT:
+                missing = []
+                if not Config.AZURE_API_KEY:
+                    missing.append("AZURE_OPENAI_API_KEY")
+                if not Config.AZURE_ENDPOINT:
+                    missing.append("AZURE_OPENAI_ENDPOINT")
+                error_msg = f"Missing required secrets: {', '.join(missing)}. Please configure these in your Streamlit secrets."
+                print(f"❌ Configuration Error: {error_msg}")
+                fallback = self._fallback_analysis()
+                fallback['_error'] = error_msg
+                fallback['_analysis_failed'] = True
+                return fallback
+            
             print("🤖 Calling GPT-4 for resume analysis...")
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -1875,6 +1922,16 @@ class JobSeekerBackend:
         """Lazy initialization of job searcher - only tests connection when first used"""
         if self._job_searcher is None:
             print("\n🧪 Initializing RapidAPI job searcher...")
+            
+            # Check if RAPIDAPI_KEY is configured
+            if not Config.RAPIDAPI_KEY:
+                print("⚠️ WARNING: RAPIDAPI_KEY is not configured!")
+                print("   Job search functionality will not work.")
+                print("   Please configure RAPIDAPI_KEY in your Streamlit secrets.")
+                # Return a placeholder that will fail gracefully
+                self._job_searcher = LinkedInJobSearcher("")  # Empty key - will fail API calls
+                return self._job_searcher
+            
             self._job_searcher = LinkedInJobSearcher(Config.RAPIDAPI_KEY)
             # Test API connection only once
             is_working, message = self._job_searcher.test_api_connection()

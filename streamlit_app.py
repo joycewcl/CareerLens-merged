@@ -939,10 +939,31 @@ def main_analyzer_page():
                     analysis_incomplete = ai_analysis.get('_analysis_incomplete', False)
                     
                     if analysis_failed:
+                        error_msg = ai_analysis.get('_error', 'Unknown error')
+                        st.error(
+                            "❌ **AI Analysis Failed**\n\n"
+                            f"**Error:** {error_msg}\n\n"
+                        )
+                        
+                        # Show helpful instructions if it's a configuration error
+                        if "Missing required secrets" in error_msg:
+                            st.info(
+                                "💡 **How to fix this:**\n\n"
+                                "1. **In Streamlit Cloud:** \n"
+                                "   - Go to your app dashboard\n"
+                                "   - Click on **⚙️ Settings** → **Secrets**\n"
+                                "   - Add the missing API keys\n\n"
+                                "2. **For local development:**\n"
+                                "   - Create a file `.streamlit/secrets.toml` in your project\n"
+                                "   - Add your API keys in TOML format\n\n"
+                                "3. **Get API keys:**\n"
+                                "   - Azure OpenAI: https://azure.microsoft.com/en-us/products/ai-services/openai-service\n"
+                                "   - RapidAPI: https://rapidapi.com/\n\n"
+                                "After adding secrets, refresh the page."
+                            )
+                        
                         st.warning(
-                            "⚠️ **AI Analysis Failed**\n\n"
-                            f"Error: {ai_analysis.get('_error', 'Unknown error')}\n\n"
-                            "Please fill in your career details manually in the form below."
+                            "⚠️ Please fill in your career details manually in the form below."
                         )
                     elif analysis_incomplete:
                         st.warning(
