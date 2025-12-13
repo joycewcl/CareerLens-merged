@@ -2470,20 +2470,20 @@ st.sidebar.markdown("""
         margin-top: 1.5rem;
         margin-bottom: 0.5rem;
         padding-left: 0.5rem;
-        border-left: 3px solid #00D2FF;
+        border-left: 3px solid var(--brand-glow);
     }
     
     /* Navigation Items */
     .nav-item {
         font-family: 'Inter', sans-serif;
-        color: #94A3B8 !important;
+        color: var(--text-secondary) !important;
         font-size: 0.9rem;
         padding-left: 1.5rem;
         margin: 0.3rem 0;
         cursor: pointer;
     }
     .nav-item:hover {
-        color: #00D2FF !important;
+        color: var(--brand-glow) !important;
     }
 </style>
 

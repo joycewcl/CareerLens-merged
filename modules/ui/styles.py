@@ -81,16 +81,21 @@ def render_styles():
         
         /* CareerLens Design System - CSS Variables */
         :root {{
+            /* Brand Colors */
             --bg-primary: #0F172A;
             --text-primary-light: #FFFFFF;
             --text-secondary: #94A3B8;
             --brand-glow: #00D2FF;
             --brand-core: #0084C2;
-            --navy: #0f172a;
-            --cyan: #00d2ff;
+            
+            /* Legacy aliases for backwards compatibility */
+            --navy: var(--bg-primary);
+            --cyan: var(--brand-glow);
+            --primary-accent: var(--brand-core);
+            --action-accent: var(--brand-glow);
+            
+            /* UI Colors */
             --bg-gray: #f3f4f6;
-            --primary-accent: #0084C2;
-            --action-accent: #00D2FF;
             --bg-main: #f3f4f6;
             --bg-container: #F4F7FC;
             --card-bg: #FFFFFF;
