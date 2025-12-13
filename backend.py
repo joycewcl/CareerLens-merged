@@ -259,7 +259,7 @@ def api_call_with_retry(request_func, max_retries=3, initial_delay=1):
                 retry_after = response.headers.get('Retry-After', delay * 2)
                 try:
                     wait_time = int(retry_after)
-                except:
+                except (ValueError, TypeError):
                     wait_time = delay * 2
                 
                 print(f"⚠️ Rate limited (attempt {attempt + 1}/{max_retries}), waiting {wait_time}s...")
@@ -363,7 +363,7 @@ def extract_salary_from_text_regex(text):
                 max_sal = match[1].replace(',', '').replace('k', '000').replace('K', '000')
                 try:
                     return int(min_sal), int(max_sal)
-                except:
+                except (ValueError, TypeError):
                     pass
     
     return None, None
@@ -973,7 +973,7 @@ class IndeedScraperAPI:
                 'company_rating': job_data.get('rating', {}).get('rating', 0),
                 'is_remote': job_data.get('isRemote', False)
             }
-        except:
+        except Exception:
             return None
 
 
@@ -1631,7 +1631,7 @@ class LinkedInJobSearcher:
             
             return []
         
-        except:
+        except Exception:
             return []
     
     def _normalize_jobs(self, jobs: List[Dict]) -> List[Dict]:
@@ -1653,7 +1653,7 @@ class LinkedInJobSearcher:
                             region = addr.get('addressRegion', '')
                             if city and region:
                                 location = f"{city}, {region}"
-                    except:
+                    except (KeyError, TypeError, IndexError):
                         pass
                 
                 normalized_job = {
@@ -2801,7 +2801,7 @@ def ai_interview_page():
                                             summary_data = json.loads(summary)
                                             interview['summary'] = summary_data
                                             interview['completed'] = True
-                                        except:
+                                        except (json.JSONDecodeError, KeyError, TypeError):
                                             interview['summary'] = {"error": "Summary parsing failed"}
                                             interview['completed'] = True
                                 else:
