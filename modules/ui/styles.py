@@ -27,15 +27,12 @@ def _load_logo():
                 logo_base64 = get_img_as_base64(logo_path)
                 _logo_html = f'<img src="data:image/png;base64,{logo_base64}" class="hero-bg-logo">'
                 return _logo_html
-            except Exception:
+            except (FileNotFoundError, IOError, OSError):
+                # Image file exists but couldn't be read - continue to fallback
                 pass
     
     # Fallback to CSS-only logo with gradient text
-    _logo_html = '''<div class="hero-bg-logo hero-bg-logo-text">
-        <span style="font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 60px; 
-        background: var(--accent-gradient); -webkit-background-clip: text; 
-        -webkit-text-fill-color: transparent; background-clip: text; opacity: 0.15;">CL</span>
-    </div>'''
+    _logo_html = '<div class="hero-bg-logo hero-bg-logo-text"><span class="hero-logo-initials">CL</span></div>'
     return _logo_html
 
 
@@ -225,6 +222,16 @@ def render_styles():
             height: 150px;
             right: 20px;
             top: 20px;
+        }}
+        .hero-logo-initials {{
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 60px;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            opacity: 0.15;
         }}
         
         .dashboard-metric-card {{
