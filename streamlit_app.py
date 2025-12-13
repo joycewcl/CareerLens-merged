@@ -897,7 +897,7 @@ def main_analyzer_page():
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #00D2FF 0%, #0084C2 100%);
+            background: var(--accent-gradient);
             border-radius: 50%;
             box-shadow: 0 0 30px rgba(0, 210, 255, 0.4);
         }
@@ -905,7 +905,7 @@ def main_analyzer_page():
             font-family: 'Montserrat', sans-serif;
             font-size: 3rem;
             font-weight: 700;
-            color: #FFFFFF;
+            color: var(--text-primary-light);
         }
         .main-title {
             font-family: 'Montserrat', sans-serif;
