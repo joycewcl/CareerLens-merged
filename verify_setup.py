@@ -112,7 +112,8 @@ def check_app_files() -> bool:
     if os.path.exists("modules") and os.path.isdir("modules"):
         print(f"✅ modules/ directory")
     else:
-        print(f"⚠️  modules/ directory - NOT FOUND (optional for some features)")
+        print(f"⚠️  modules/ directory - NOT FOUND (required for Market Dashboard features)")
+        all_exist = False
     
     return all_exist
 
@@ -182,10 +183,15 @@ def main():
         print("\n⚠️  Some modules are missing. Install them with:")
         print("   pip install -r requirements.txt")
     
-    if (results['python_version'] and 
+    # Check if all tests passed
+    all_checks_passed = (
+        results['python_version'] and 
         failed_modules == 0 and 
         results['app_files'] and 
-        results['syntax_check']):
+        results['syntax_check']
+    )
+    
+    if all_checks_passed:
         print("\n✅ All checks passed! Your environment is ready.")
         print("\nYou can now run the application with:")
         print("   streamlit run streamlit_app.py")
