@@ -10,12 +10,16 @@ from modules.utils.helpers import get_img_as_base64
 
 def _get_sidebar_logo_html():
     """Get logo HTML for sidebar"""
-    logo_paths = ["CareerLens_Logo.png", "Logo.jpg"]
-    for logo_path in logo_paths:
+    logo_configs = [
+        ("CareerLens_Logo.png", "image/png"),
+        ("Logo.jpg", "image/jpeg")
+    ]
+    
+    for logo_path, mime_type in logo_configs:
         if os.path.exists(logo_path):
             try:
                 logo_base64 = get_img_as_base64(logo_path)
-                return f'<img src="data:image/png;base64,{logo_base64}" class="sidebar-logo-image">'
+                return f'<img src="data:{mime_type};base64,{logo_base64}" class="sidebar-logo-image">'
             except Exception as e:
                 # Failed to load logo file - continue to next
                 continue

@@ -27,12 +27,17 @@ def _load_logo():
     _logo_loaded = True
     from modules.utils.helpers import get_img_as_base64
     
-    logo_paths = ["logo.png", "CareerLens_Logo.png"]
-    for logo_path in logo_paths:
+    logo_configs = [
+        ("logo.png", "image/png"),
+        ("CareerLens_Logo.png", "image/png"),
+        ("Logo.jpg", "image/jpeg")
+    ]
+    
+    for logo_path, mime_type in logo_configs:
         if os.path.exists(logo_path):
             try:
                 logo_base64 = get_img_as_base64(logo_path)
-                _logo_html = f'<img src="data:image/png;base64,{logo_base64}" class="hero-bg-logo">'
+                _logo_html = f'<img src="data:{mime_type};base64,{logo_base64}" class="hero-bg-logo">'
                 return _logo_html
             except (IOError, OSError) as e:
                 # Failed to load logo file - log and continue to next logo
