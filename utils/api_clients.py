@@ -112,10 +112,19 @@ class APIMEmbeddingGenerator:
             payload = {"input": text, "model": self.deployment}
             estimated_tokens = len(self.encoding.encode(text))
             
-            def make_request():
-                return requests.post(self.url, headers=self.headers, json=payload, timeout=30)
+            def make_request(url=None):
+                target_url = url or self.url
+                return requests.post(target_url, headers=self.headers, json=payload, timeout=30)
             
-            response = api_call_with_retry(make_request, max_retries=3)
+            response = api_call_with_retry(lambda: make_request(self.url), max_retries=3)
+            
+            # Fallback for 404 (APIM path issues)
+            if response and response.status_code == 404 and '/openai/' in self.url:
+                fallback_url = self.url.replace('/openai/', '/')
+                st.warning(f"⚠️ 404 on primary URL, trying fallback: {fallback_url}")
+                response = api_call_with_retry(lambda: make_request(fallback_url), max_retries=1)
+                if response and response.status_code == 200:
+                    self.url = fallback_url  # Update for future calls
             
             if response and response.status_code == 200:
                 result = response.json()
@@ -123,6 +132,8 @@ class APIMEmbeddingGenerator:
                 tokens_used = result['usage'].get('total_tokens', 0) if 'usage' in result else estimated_tokens
                 return embedding, tokens_used
             else:
+                if response and response.status_code == 404:
+                     st.error(f"🚫 404 Resource Not Found. Check AZURE_OPENAI_EMBEDDING_DEPLOYMENT ('{self.deployment}').")
                 return None, 0
         except Exception as e:
             st.error(f"Error generating embedding: {e}")
@@ -168,10 +179,18 @@ class APIMEmbeddingGenerator:
                 estimated_batch_tokens = sum(len(self.encoding.encode(text)) for text in batch)
                 _websocket_keepalive(f"Processing batch {batch_num}/{total_batches}...")
                 
-                def make_request():
-                    return requests.post(self.url, headers=self.headers, json=payload, timeout=30)
+                def make_request(url=None):
+                    target_url = url or self.url
+                    return requests.post(target_url, headers=self.headers, json=payload, timeout=30)
                 
-                response = api_call_with_retry(make_request, max_retries=3)
+                response = api_call_with_retry(lambda: make_request(self.url), max_retries=3)
+                
+                # Fallback for 404
+                if response and response.status_code == 404 and '/openai/' in self.url:
+                    fallback_url = self.url.replace('/openai/', '/')
+                    response = api_call_with_retry(lambda: make_request(fallback_url), max_retries=1)
+                    if response and response.status_code == 200:
+                        self.url = fallback_url
                 
                 # Keepalive after API call completes
                 _ensure_websocket_alive()
@@ -338,10 +357,19 @@ IMPORTANT: Return ONLY the JSON object, no markdown code blocks, no additional t
             
             _websocket_keepalive("Generating resume...")
             
-            def make_request():
-                return requests.post(self.url, headers=self.headers, json=payload, timeout=45)
+            def make_request(url=None):
+                target_url = url or self.url
+                return requests.post(target_url, headers=self.headers, json=payload, timeout=45)
             
-            response = api_call_with_retry(make_request, max_retries=3)
+            response = api_call_with_retry(lambda: make_request(self.url), max_retries=3)
+            
+            # Fallback for 404 (APIM path issues)
+            if response and response.status_code == 404 and '/openai/' in self.url:
+                fallback_url = self.url.replace('/openai/', '/')
+                st.warning(f"⚠️ 404 on primary URL, trying fallback: {fallback_url}")
+                response = api_call_with_retry(lambda: make_request(fallback_url), max_retries=1)
+                if response and response.status_code == 200:
+                    self.url = fallback_url
             
             if response and response.status_code == 200:
                 result = response.json()
@@ -371,8 +399,11 @@ IMPORTANT: Return ONLY the JSON object, no markdown code blocks, no additional t
                         return None
             else:
                 if response:
-                    error_detail = response.text[:200] if response.text else "No error details"
-                    st.error(f"API Error: {response.status_code} - {error_detail}")
+                    if response.status_code == 404:
+                         st.error(f"🚫 404 Resource Not Found. Please check that your AZURE_OPENAI_DEPLOYMENT name ('{self.deployment}') matches your Azure resource.")
+                    else:
+                        error_detail = response.text[:200] if response.text else "No error details"
+                        st.error(f"API Error: {response.status_code} - {error_detail}")
                 return None
         except Exception as e:
             st.error(f"Error generating resume: {e}")
@@ -489,10 +520,19 @@ Choose the most appropriate seniority level based on the job titles."""
                 "response_format": {"type": "json_object"}
             }
             
-            def make_request():
-                return requests.post(self.url, headers=self.headers, json=payload, timeout=30)
+            def make_request(url=None):
+                target_url = url or self.url
+                return requests.post(target_url, headers=self.headers, json=payload, timeout=30)
             
-            response = api_call_with_retry(make_request, max_retries=2)
+            response = api_call_with_retry(lambda: make_request(self.url), max_retries=2)
+            
+            # Fallback for 404
+            if response and response.status_code == 404 and '/openai/' in self.url:
+                fallback_url = self.url.replace('/openai/', '/')
+                response = api_call_with_retry(lambda: make_request(fallback_url), max_retries=1)
+                if response and response.status_code == 200:
+                    self.url = fallback_url
+            
             if response and response.status_code == 200:
                 result = response.json()
                 content = result['choices'][0]['message']['content']
@@ -557,10 +597,19 @@ Focus on certifications that are:
                 "response_format": {"type": "json_object"}
             }
             
-            def make_request():
-                return requests.post(self.url, headers=self.headers, json=payload, timeout=30)
+            def make_request(url=None):
+                target_url = url or self.url
+                return requests.post(target_url, headers=self.headers, json=payload, timeout=30)
             
-            response = api_call_with_retry(make_request, max_retries=2)
+            response = api_call_with_retry(lambda: make_request(self.url), max_retries=2)
+            
+            # Fallback for 404
+            if response and response.status_code == 404 and '/openai/' in self.url:
+                fallback_url = self.url.replace('/openai/', '/')
+                response = api_call_with_retry(lambda: make_request(fallback_url), max_retries=1)
+                if response and response.status_code == 200:
+                    self.url = fallback_url
+            
             if response and response.status_code == 200:
                 result = response.json()
                 content = result['choices'][0]['message']['content']
@@ -616,10 +665,19 @@ Return ONLY the recruiter note text, no labels or formatting."""
                 "temperature": 0.7
             }
             
-            def make_request():
-                return requests.post(self.url, headers=self.headers, json=payload, timeout=30)
+            def make_request(url=None):
+                target_url = url or self.url
+                return requests.post(target_url, headers=self.headers, json=payload, timeout=30)
             
-            response = api_call_with_retry(make_request, max_retries=2)
+            response = api_call_with_retry(lambda: make_request(self.url), max_retries=2)
+            
+            # Fallback for 404
+            if response and response.status_code == 404 and '/openai/' in self.url:
+                fallback_url = self.url.replace('/openai/', '/')
+                response = api_call_with_retry(lambda: make_request(fallback_url), max_retries=1)
+                if response and response.status_code == 200:
+                    self.url = fallback_url
+            
             if response and response.status_code == 200:
                 result = response.json()
                 

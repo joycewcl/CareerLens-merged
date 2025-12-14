@@ -473,6 +473,8 @@ def extract_structured_profile(resume_text: str, enable_verification: bool = Fal
             return None
         
         from openai import AzureOpenAI
+        import openai
+        
         client = AzureOpenAI(
             azure_endpoint=config.AZURE_ENDPOINT,
             api_key=config.AZURE_API_KEY,
@@ -507,16 +509,39 @@ Important:
 - Return ONLY valid JSON, no additional text"""
         
         print("🤖 Pass 1: Extracting profile information...")
-        response_pass1 = client.chat.completions.create(
-            model=config.AZURE_MODEL,
-            messages=[
-                {"role": "system", "content": "You are a resume parser. Extract structured information and return only valid JSON."},
-                {"role": "user", "content": prompt_pass1}
-            ],
-            max_tokens=2000,
-            temperature=0.3,
-            response_format={"type": "json_object"}
-        )
+        
+        try:
+            response_pass1 = client.chat.completions.create(
+                model=config.AZURE_MODEL,
+                messages=[
+                    {"role": "system", "content": "You are a resume parser. Extract structured information and return only valid JSON."},
+                    {"role": "user", "content": prompt_pass1}
+                ],
+                max_tokens=2000,
+                temperature=0.3,
+                response_format={"type": "json_object"}
+            )
+        except openai.NotFoundError:
+            if '/openai' in config.AZURE_ENDPOINT:
+                print("⚠️ 404 on primary endpoint, trying fallback without /openai path...")
+                new_endpoint = config.AZURE_ENDPOINT.replace('/openai', '')
+                client = AzureOpenAI(
+                    azure_endpoint=new_endpoint,
+                    api_key=config.AZURE_API_KEY,
+                    api_version=config.AZURE_API_VERSION
+                )
+                response_pass1 = client.chat.completions.create(
+                    model=config.AZURE_MODEL,
+                    messages=[
+                        {"role": "system", "content": "You are a resume parser. Extract structured information and return only valid JSON."},
+                        {"role": "user", "content": prompt_pass1}
+                    ],
+                    max_tokens=2000,
+                    temperature=0.3,
+                    response_format={"type": "json_object"}
+                )
+            else:
+                raise
         
         content_pass1 = response_pass1.choices[0].message.content
         profile_data_pass1 = json.loads(content_pass1)
@@ -599,6 +624,8 @@ def generate_tailored_resume(user_profile: Dict, job_posting: Dict,
             return None
         
         from openai import AzureOpenAI
+        import openai
+        
         client = AzureOpenAI(
             azure_endpoint=config.AZURE_ENDPOINT,
             api_key=config.AZURE_API_KEY,
@@ -674,16 +701,38 @@ Return your response as a JSON object with this structure:
 Return ONLY the JSON object."""
         
         print("✨ Generating tailored resume...")
-        response = client.chat.completions.create(
-            model=config.AZURE_MODEL,
-            messages=[
-                {"role": "system", "content": system_instructions},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=3000,
-            temperature=0.7,
-            response_format={"type": "json_object"}
-        )
+        try:
+            response = client.chat.completions.create(
+                model=config.AZURE_MODEL,
+                messages=[
+                    {"role": "system", "content": system_instructions},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=3000,
+                temperature=0.7,
+                response_format={"type": "json_object"}
+            )
+        except openai.NotFoundError:
+            if '/openai' in config.AZURE_ENDPOINT:
+                print("⚠️ 404 on primary endpoint, trying fallback without /openai path...")
+                new_endpoint = config.AZURE_ENDPOINT.replace('/openai', '')
+                client = AzureOpenAI(
+                    azure_endpoint=new_endpoint,
+                    api_key=config.AZURE_API_KEY,
+                    api_version=config.AZURE_API_VERSION
+                )
+                response = client.chat.completions.create(
+                    model=config.AZURE_MODEL,
+                    messages=[
+                        {"role": "system", "content": system_instructions},
+                        {"role": "user", "content": prompt}
+                    ],
+                    max_tokens=3000,
+                    temperature=0.7,
+                    response_format={"type": "json_object"}
+                )
+            else:
+                raise
         
         content = response.choices[0].message.content
         resume_data = json.loads(content)
@@ -846,19 +895,30 @@ Important:
         
         _websocket_keepalive("Extracting profile information...")
         
-        def make_request_pass1():
+        def make_request_pass1(url=None):
+            target_url = url or text_gen.url
             return requests.post(
-                text_gen.url,
+                target_url,
                 headers=text_gen.headers,
                 json=payload_pass1,
                 timeout=45
             )
         
-        response_pass1 = api_call_with_retry(make_request_pass1, max_retries=3)
+        response_pass1 = api_call_with_retry(lambda: make_request_pass1(text_gen.url), max_retries=3)
+        
+        # Fallback for 404 (APIM path issues)
+        if response_pass1 and response_pass1.status_code == 404 and '/openai/' in text_gen.url:
+            fallback_url = text_gen.url.replace('/openai/', '/')
+            st.warning(f"⚠️ 404 on primary URL, trying fallback: {fallback_url}")
+            response_pass1 = api_call_with_retry(lambda: make_request_pass1(fallback_url), max_retries=1)
+            if response_pass1 and response_pass1.status_code == 200:
+                text_gen.url = fallback_url  # Update for future calls
         
         if not response_pass1 or response_pass1.status_code != 200:
             if response_pass1 and response_pass1.status_code == 429:
                 st.error("🚫 Rate limit reached for profile extraction after retries. Please wait a few minutes and try again.")
+            elif response_pass1 and response_pass1.status_code == 404:
+                st.error(f"🚫 404 Resource Not Found. This likely means the deployment name '{text_gen.deployment}' is incorrect. Please check AZURE_OPENAI_DEPLOYMENT in your secrets.")
             else:
                 error_detail = response_pass1.text[:200] if response_pass1 and response_pass1.text else "No error details"
                 endpoint_info = f"Endpoint: {text_gen.url.split('/deployments')[0]}" if text_gen else "Endpoint: Not configured"
