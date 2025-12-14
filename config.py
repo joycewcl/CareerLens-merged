@@ -59,7 +59,10 @@ class Config(metaclass=_ConfigMeta):
     @staticmethod
     def get_pinecone_api_key():
         """Get Pinecone API key from Streamlit secrets."""
-        return st.secrets.get("PINECONE_API_KEY", "")
+        try:
+            return st.secrets.get("PINECONE_API_KEY", "")
+        except (KeyError, AttributeError):
+            return ""
     
     @staticmethod
     def get_azure_endpoint():
@@ -68,7 +71,10 @@ class Config(metaclass=_ConfigMeta):
         Users should set: AZURE_OPENAI_ENDPOINT = "https://hkust.azure-api.net/openai"
         This method automatically strips the /openai suffix because the SDK adds it internally.
         """
-        endpoint = st.secrets.get("AZURE_OPENAI_ENDPOINT", "")
+        try:
+            endpoint = st.secrets.get("AZURE_OPENAI_ENDPOINT", "")
+        except (KeyError, AttributeError):
+            return ""
         # Strip /openai suffix if present (SDK adds it automatically)
         if endpoint.endswith('/openai'):
             endpoint = endpoint[:-7]
@@ -77,12 +83,18 @@ class Config(metaclass=_ConfigMeta):
     @staticmethod
     def get_azure_api_key():
         """Get Azure OpenAI API key from Streamlit secrets."""
-        return st.secrets.get("AZURE_OPENAI_API_KEY", "")
+        try:
+            return st.secrets.get("AZURE_OPENAI_API_KEY", "")
+        except (KeyError, AttributeError):
+            return ""
     
     @staticmethod
     def get_rapidapi_key():
         """Get RapidAPI key from Streamlit secrets."""
-        return st.secrets.get("RAPIDAPI_KEY", "")
+        try:
+            return st.secrets.get("RAPIDAPI_KEY", "")
+        except (KeyError, AttributeError):
+            return ""
     
     @classmethod
     def setup(cls):
@@ -102,7 +114,34 @@ class Config(metaclass=_ConfigMeta):
         
         if missing:
             print(f"⚠️ Missing secrets: {', '.join(missing)}")
+            print()
+            print(f"💡 Please configure these secrets:")
+            print(f"   1. In Streamlit Cloud: Go to App Settings → Secrets")
+            print(f"   2. Locally: Create .streamlit/secrets.toml file")
+            print(f"   3. Add these keys:")
+            for secret in missing:
+                print(f"      {secret} = \"your-key-here\"")
+            print()
             return False
         
         print("✅ Configuration validated")
         return True
+    
+    @staticmethod
+    def check_azure_credentials():
+        """Check if Azure OpenAI credentials are configured.
+        
+        Returns:
+            tuple: (is_configured: bool, error_message: str or None)
+        """
+        missing = []
+        if not Config.get_azure_api_key():
+            missing.append("AZURE_OPENAI_API_KEY")
+        if not Config.get_azure_endpoint():
+            missing.append("AZURE_OPENAI_ENDPOINT")
+        
+        if missing:
+            error_msg = f"Missing required secrets: {', '.join(missing)}. Please configure these in your Streamlit secrets."
+            return False, error_msg
+        
+        return True, None

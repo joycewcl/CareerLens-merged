@@ -259,7 +259,7 @@ def api_call_with_retry(request_func, max_retries=3, initial_delay=1):
                 retry_after = response.headers.get('Retry-After', delay * 2)
                 try:
                     wait_time = int(retry_after)
-                except:
+                except (ValueError, TypeError):
                     wait_time = delay * 2
                 
                 print(f"⚠️ Rate limited (attempt {attempt + 1}/{max_retries}), waiting {wait_time}s...")
@@ -287,6 +287,11 @@ def extract_salary_from_text(text):
     text_for_extraction = text[:3000] if len(text) > 3000 else text
     
     try:
+        # Check if API keys are configured - if not, fall back to regex
+        is_configured, _ = Config.check_azure_credentials()
+        if not is_configured:
+            return extract_salary_from_text_regex(text)
+        
         client = AzureOpenAI(
             azure_endpoint=Config.AZURE_ENDPOINT,
             api_key=Config.AZURE_API_KEY,
@@ -363,7 +368,7 @@ def extract_salary_from_text_regex(text):
                 max_sal = match[1].replace(',', '').replace('k', '000').replace('K', '000')
                 try:
                     return int(min_sal), int(max_sal)
-                except:
+                except (ValueError, TypeError):
                     pass
     
     return None, None
@@ -973,7 +978,7 @@ class IndeedScraperAPI:
                 'company_rating': job_data.get('rating', {}).get('rating', 0),
                 'is_remote': job_data.get('isRemote', False)
             }
-        except:
+        except Exception:
             return None
 
 
@@ -1143,6 +1148,12 @@ def extract_relevant_resume_sections(resume_text):
 def extract_structured_profile(resume_text, enable_verification=False):
     """Extract structured profile from resume with optional two-pass verification (from CareerLens)"""
     try:
+        # Check if API keys are configured
+        is_configured, error_msg = Config.check_azure_credentials()
+        if not is_configured:
+            print(f"❌ Configuration Error: {error_msg}")
+            return None
+        
         client = AzureOpenAI(
             azure_endpoint=Config.AZURE_ENDPOINT,
             api_key=Config.AZURE_API_KEY,
@@ -1247,6 +1258,12 @@ Return ONLY valid JSON, no additional text."""
 def generate_tailored_resume(user_profile, job_posting, raw_resume_text=None):
     """Generate a tailored resume based on user profile and job posting (from CareerLens)"""
     try:
+        # Check if API keys are configured
+        is_configured, error_msg = Config.check_azure_credentials()
+        if not is_configured:
+            print(f"❌ Configuration Error: {error_msg}")
+            return None
+        
         client = AzureOpenAI(
             azure_endpoint=Config.AZURE_ENDPOINT,
             api_key=Config.AZURE_API_KEY,
@@ -1351,12 +1368,19 @@ class GPT4JobRoleDetector:
     """Use GPT-4 to detect job roles AND extract skills dynamically"""
     
     def __init__(self):
-        self.client = AzureOpenAI(
-            azure_endpoint=Config.AZURE_ENDPOINT,
-            api_key=Config.AZURE_API_KEY,
-            api_version=Config.AZURE_API_VERSION
-        )
+        self._client = None
         self.model = Config.AZURE_MODEL
+    
+    @property
+    def client(self):
+        """Lazy-load AzureOpenAI client only when needed"""
+        if self._client is None:
+            self._client = AzureOpenAI(
+                azure_endpoint=Config.AZURE_ENDPOINT,
+                api_key=Config.AZURE_API_KEY,
+                api_version=Config.AZURE_API_VERSION
+            )
+        return self._client
     
     def analyze_resume_for_job_roles(self, resume_data: Dict) -> Dict:
         """Analyze resume with GPT-4 - Extract ALL skills dynamically"""
@@ -1410,6 +1434,15 @@ For job search, provide SIMPLE terms that would work on LinkedIn/Indeed (not com
 Be thorough and creative!"""
 
         try:
+            # Check if API keys are configured before attempting API call
+            is_configured, error_msg = Config.check_azure_credentials()
+            if not is_configured:
+                print(f"❌ Configuration Error: {error_msg}")
+                fallback = self._fallback_analysis()
+                fallback['_error'] = error_msg
+                fallback['_analysis_failed'] = True
+                return fallback
+            
             print("🤖 Calling GPT-4 for resume analysis...")
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -1631,7 +1664,7 @@ class LinkedInJobSearcher:
             
             return []
         
-        except:
+        except Exception:
             return []
     
     def _normalize_jobs(self, jobs: List[Dict]) -> List[Dict]:
@@ -1653,7 +1686,7 @@ class LinkedInJobSearcher:
                             region = addr.get('addressRegion', '')
                             if city and region:
                                 location = f"{city}, {region}"
-                    except:
+                    except (KeyError, TypeError, IndexError):
                         pass
                 
                 normalized_job = {
@@ -1875,6 +1908,16 @@ class JobSeekerBackend:
         """Lazy initialization of job searcher - only tests connection when first used"""
         if self._job_searcher is None:
             print("\n🧪 Initializing RapidAPI job searcher...")
+            
+            # Check if RAPIDAPI_KEY is configured
+            if not Config.RAPIDAPI_KEY:
+                print("⚠️ WARNING: RAPIDAPI_KEY is not configured!")
+                print("   Job search functionality will not work.")
+                print("   Please configure RAPIDAPI_KEY in your Streamlit secrets.")
+                # Return a placeholder that will fail gracefully
+                self._job_searcher = LinkedInJobSearcher("")  # Empty key - will fail API calls
+                return self._job_searcher
+            
             self._job_searcher = LinkedInJobSearcher(Config.RAPIDAPI_KEY)
             # Test API connection only once
             is_working, message = self._job_searcher.test_api_connection()
@@ -2488,10 +2531,15 @@ def initialize_interview_session(job_data):
 def generate_interview_question(job_data, seeker_profile, previous_qa=None):
     """Generate interview questions using Azure OpenAI"""
     try:
+        # Check if API keys are configured
+        is_configured, error_msg = Config.check_azure_credentials()
+        if not is_configured:
+            return f"Error: {error_msg}"
+        
         client = AzureOpenAI(
-            azure_endpoint="https://hkust.azure-api.net",
-            api_version="2024-10-21",
-            api_key="7b567f8243bc4985a4e1f870092a3e60"
+            azure_endpoint=Config.AZURE_ENDPOINT,
+            api_key=Config.AZURE_API_KEY,
+            api_version=Config.AZURE_API_VERSION
         )
 
         # Prepare position information
@@ -2582,10 +2630,15 @@ Please only return the question content, without additional explanations.
 def evaluate_answer(question, answer, job_data):
     """Evaluate job seeker's answer"""
     try:
+        # Check if API keys are configured
+        is_configured, error_msg = Config.check_azure_credentials()
+        if not is_configured:
+            return f'{{"error": "{error_msg}"}}'
+        
         client = AzureOpenAI(
-            azure_endpoint="https://hkust.azure-api.net",
-            api_version="2024-10-21",
-            api_key="7b567f8243bc4985a4e1f870092a3e60"
+            azure_endpoint=Config.AZURE_ENDPOINT,
+            api_key=Config.AZURE_API_KEY,
+            api_version=Config.AZURE_API_VERSION
         )
 
         prompt = f"""
@@ -2641,10 +2694,15 @@ Please return evaluation results in the following JSON format:
 def generate_final_summary(interview_data, job_data):
     """Generate final interview summary"""
     try:
+        # Check if API keys are configured
+        is_configured, error_msg = Config.check_azure_credentials()
+        if not is_configured:
+            return f'{{"error": "{error_msg}"}}'
+        
         client = AzureOpenAI(
-            azure_endpoint="https://hkust.azure-api.net",
-            api_version="2024-10-21",
-            api_key="7b567f8243bc4985a4e1f870092a3e60"
+            azure_endpoint=Config.AZURE_ENDPOINT,
+            api_key=Config.AZURE_API_KEY,
+            api_version=Config.AZURE_API_VERSION
         )
 
         # Prepare all Q&A records
@@ -2801,7 +2859,7 @@ def ai_interview_page():
                                             summary_data = json.loads(summary)
                                             interview['summary'] = summary_data
                                             interview['completed'] = True
-                                        except:
+                                        except (json.JSONDecodeError, KeyError, TypeError):
                                             interview['summary'] = {"error": "Summary parsing failed"}
                                             interview['completed'] = True
                                 else:

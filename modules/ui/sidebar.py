@@ -18,11 +18,41 @@ def render_sidebar():
     """Render CareerLens sidebar with resume upload, market filters, and analyze button"""
     with st.sidebar:
         st.markdown("""
+        <style>
+            .sidebar-logo {
+                color: white !important;
+                margin-bottom: 0.5rem;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                font-family: 'Montserrat', sans-serif;
+                font-size: 2rem;
+                font-weight: 700;
+                letter-spacing: -1px;
+                text-align: center;
+                justify-content: center;
+            }
+            .sidebar-logo .brand-span {
+                color: var(--brand-core);
+            }
+            .sidebar-logo .lens-span {
+                color: var(--brand-glow);
+            }
+            .sidebar-tagline {
+                color: var(--text-secondary) !important;
+                font-size: 0.7rem;
+                margin: 0;
+                font-family: 'Montserrat', sans-serif;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+                text-align: center;
+            }
+        </style>
         <div style="margin-bottom: 2rem;">
-            <h2 style="color: white !important; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                🔍 CareerLens
+            <h2 class="sidebar-logo">
+                <span class="brand-span">Career</span><span class="lens-span">Lens</span>
             </h2>
-            <p style="color: #94a3b8 !important; font-size: 0.9rem; margin: 0;">AI Career Copilot for Hong Kong</p>
+            <p class="sidebar-tagline">AI Career Copilot • Hong Kong</p>
         </div>
         """, unsafe_allow_html=True)
         

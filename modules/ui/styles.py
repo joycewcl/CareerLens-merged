@@ -2,6 +2,7 @@
 import json
 import os
 import textwrap
+import logging
 
 import streamlit as st
 import streamlit.components.v1 as components
@@ -9,6 +10,12 @@ import streamlit.components.v1 as components
 # Lazy load logo - only when needed
 _logo_html = None
 _logo_loaded = False
+
+# Set up logger for this module
+logger = logging.getLogger(__name__)
+
+# Logo configuration
+LOGO_INITIALS = "CL"  # CareerLens initials for CSS-only fallback
 
 
 def _load_logo():
@@ -27,11 +34,13 @@ def _load_logo():
                 logo_base64 = get_img_as_base64(logo_path)
                 _logo_html = f'<img src="data:image/png;base64,{logo_base64}" class="hero-bg-logo">'
                 return _logo_html
-            except Exception:
-                _logo_html = '<div class="hero-bg-logo"></div>'
-                return _logo_html
+            except (IOError, OSError) as e:
+                # Failed to load logo file - log and continue to next logo
+                logger.warning(f"Failed to load logo file {logo_path}: {e}")
+                continue
     
-    _logo_html = '<div class="hero-bg-logo"></div>'
+    # No logo files found or all failed to load - use CSS-only fallback
+    _logo_html = f'<div class="hero-bg-logo hero-bg-logo-text"><span class="hero-logo-initials">{LOGO_INITIALS}</span></div>'
     return _logo_html
 
 
@@ -76,19 +85,42 @@ def render_styles():
     """Render all CSS styles and JavaScript for the application"""
     st.markdown("""
     <style>
+        /* Import Google Fonts for CareerLens branding */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Montserrat:wght@400;700&display=swap');
+        
         /* CareerLens Design System - CSS Variables */
         :root {{
-            --navy: #0f172a;
-            --cyan: #00d2ff;
+            /* Backgrounds */
+            --bg-primary: #0F172A;   /* Deep Midnight Navy */
+            --bg-secondary: #1E293B; /* Slightly lighter navy for cards/sections */
+
+            /* Text */
+            --text-primary-light: #FFFFFF;
+            --text-secondary: #94A3B8; /* Muted grey-blue for subtitles */
+
+            /* Brand Colors */
+            --brand-glow: #00D2FF;   /* The bright cyan highlight */
+            --brand-core: #0084C2;   /* The standard logo blue */
+            
+            /* UI Elements */
+            --accent-gradient: linear-gradient(135deg, #00D2FF 0%, #0084C2 100%);
+            
+            /* Logo Styling */
+            --logo-font-size: 60px;
+            --logo-opacity: 0.15;
+            
+            /* Legacy aliases for backwards compatibility */
+            --navy: var(--bg-primary);
+            --cyan: var(--brand-glow);
+            --primary-accent: var(--brand-core);
+            --action-accent: var(--brand-glow);
+            
+            /* UI Colors */
             --bg-gray: #f3f4f6;
-            --primary-accent: #0F62FE;
-            --action-accent: #0F62FE;
             --bg-main: #f3f4f6;
             --bg-container: #F4F7FC;
             --card-bg: #FFFFFF;
             --text-primary: #161616;
-            --text-secondary: #161616;
-            --text-muted: #161616;
             --border-color: #E0E0E0;
             --hover-bg: #F0F0F0;
             --success-green: #10B981;
@@ -96,19 +128,18 @@ def render_styles():
             --error-red: #EF4444;
             --navy-deep: #1e3a5f;
             --navy-light: #2C3E50;
+            --btn-text: #0a0a0a;
         }}
         
         [data-theme="dark"],
         html[data-theme="dark"],
         html[data-theme="dark"] :root {{
-            --primary-accent: #4589FF;
-            --action-accent: #4589FF;
+            --primary-accent: #00D2FF;
+            --action-accent: #00D2FF;
             --bg-main: #161616;
             --bg-container: #262626;
             --card-bg: #262626;
             --text-primary: #F4F4F4;
-            --text-secondary: #F4F4F4;
-            --text-muted: #F4F4F4;
             --border-color: #3D3D3D;
             --hover-bg: #333333;
             --navy: #1e293b;
@@ -127,30 +158,37 @@ def render_styles():
         }}
         
         [data-testid="stSidebar"] {{
-            background-color: var(--navy);
+            background-color: var(--bg-primary);
             padding: 2rem 1rem;
         }}
         [data-testid="stSidebar"] * {{
-            color: #94a3b8 !important;
+            color: var(--text-secondary) !important;
+            font-family: 'Inter', sans-serif;
         }}
         [data-testid="stSidebar"] h1,
         [data-testid="stSidebar"] h2,
         [data-testid="stSidebar"] h3,
         [data-testid="stSidebar"] .stMarkdown h2,
         [data-testid="stSidebar"] .stMarkdown h3 {{
-            color: white !important;
+            color: var(--text-primary-light) !important;
+            font-family: 'Montserrat', sans-serif;
         }}
         [data-testid="stSidebar"] .stButton > button {{
-            background-color: var(--cyan) !important;
-            color: var(--navy) !important;
-            font-weight: 600 !important;
+            background: var(--accent-gradient);
+            color: #FFFFFF !important;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700 !important;
+            border: none;
+            border-radius: 50px;
+            box-shadow: 0 0 20px rgba(0, 210, 255, 0.4);
         }}
         [data-testid="stSidebar"] .stButton > button:hover {{
-            background-color: #06b6d4 !important;
+            box-shadow: 0 0 30px rgba(0, 210, 255, 0.6);
+            transform: translateY(-2px);
         }}
         
         .hero-container {{
-            background: linear-gradient(135deg, var(--navy) 0%, #112545 100%);
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
             padding: 40px;
             border-radius: 12px;
             color: white;
@@ -174,7 +212,7 @@ def render_styles():
             color: white;
         }}
         .hero-subtitle {{
-            color: #94a3b8;
+            color: var(--text-secondary);
             font-size: 16px;
             margin-top: 10px;
         }}
@@ -187,6 +225,25 @@ def render_styles():
             transform: rotate(-15deg);
             pointer-events: none;
             z-index: 5;
+        }}
+        .hero-bg-logo-text {{
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 150px;
+            height: 150px;
+            right: 20px;
+            top: 20px;
+        }}
+        .hero-logo-initials {{
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: var(--logo-font-size);
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            opacity: var(--logo-opacity);
         }}
         
         .dashboard-metric-card {{
@@ -210,7 +267,7 @@ def render_styles():
         }}
         
         [data-theme="dark"] .hero-container {{
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
         }}
         [data-theme="dark"] .dashboard-metric-card {{
             background: var(--card-bg);
@@ -233,7 +290,7 @@ def render_styles():
         }}
         
         .match-score {{
-            background-color: var(--action-accent);
+            background: var(--accent-gradient);
             color: white;
             padding: 0.4rem 1rem;
             border-radius: 20px;
@@ -256,14 +313,17 @@ def render_styles():
         .match-score-display {{
             font-size: 2rem;
             font-weight: bold;
-            color: var(--action-accent);
+            color: var(--brand-glow);
             text-align: center;
         }}
         
         .main-header {{
             font-size: 3rem;
             font-weight: bold;
-            color: var(--primary-accent);
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             text-align: center;
             margin-bottom: 1rem;
             letter-spacing: -0.02em;
@@ -303,7 +363,7 @@ def render_styles():
             width: 40px;
             height: 40px;
             border: 4px solid #e0e0e0;
-            border-top-color: #0F62FE;
+            border-top-color: var(--brand-glow);
             border-radius: 50%;
             animation: ws-spin 1s linear infinite;
             margin: 0 auto 15px;
@@ -325,6 +385,87 @@ def render_styles():
         }}
         [data-theme="dark"] .ws-reconnecting-subtext {{
             color: #999;
+        }}
+        
+        /* How It Works Page Styles */
+        .how-it-works-section {{
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin: 1rem 0;
+            border-left: 4px solid var(--brand-glow);
+        }}
+        
+        .step-box {{
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 12px;
+            margin: 1.5rem 0;
+            border: 2px solid var(--brand-core);
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }}
+        
+        .step-box h3 {{
+            color: var(--brand-glow);
+            margin-top: 0;
+        }}
+        
+        .step-box h4 {{
+            color: var(--brand-core);
+            margin-top: 1.5rem;
+        }}
+        
+        .step-box code {{
+            background: var(--bg-container);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }}
+        
+        .step-box pre {{
+            background: var(--bg-container);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            border-left: 3px solid var(--brand-glow);
+        }}
+        
+        .tech-badge {{
+            display: inline-block;
+            background: var(--accent-gradient);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            margin: 0.3rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }}
+        
+        [data-theme="dark"] .how-it-works-section {{
+            background: var(--bg-container);
+        }}
+        
+        [data-theme="dark"] .step-box {{
+            background: var(--bg-container);
+        }}
+        
+        /* Info Banner */
+        .info-banner {{
+            background: var(--accent-gradient);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            color: white;
+        }}
+        
+        .info-banner h3 {{
+            margin: 0;
+            color: white;
+        }}
+        
+        .info-banner p {{
+            margin: 0.5rem 0 0 0;
+            opacity: 0.9;
         }}
     </style>
     <div id="ws-reconnecting-overlay" class="ws-reconnecting-overlay">
