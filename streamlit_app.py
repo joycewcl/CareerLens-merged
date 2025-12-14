@@ -39,6 +39,7 @@ sys.setrecursionlimit(3000)
 import streamlit as st
 import sqlite3
 import json
+import base64
 from typing import List, Dict
 from io import BytesIO
 
@@ -885,12 +886,14 @@ except Exception:
 def main_analyzer_page():
     """Main Page - CareerLens"""
     # Load logo
+    logo_img = ""
     try:
         with open("Logo.jpg", "rb") as f:
             logo_base64 = base64.b64encode(f.read()).decode()
             logo_img = f'<img src="data:image/jpeg;base64,{logo_base64}" style="width: 100%; max-width: 400px; margin: 0 auto 2rem auto; display: block;">'
-    except:
-        logo_img = ""
+    except (FileNotFoundError, IOError, OSError) as e:
+        # Logo file not found or unreadable - continue without logo
+        pass
     
     st.markdown(f"""
     <style>
@@ -2443,13 +2446,13 @@ def market_dashboard_page():
 
 # Sidebar navigation with new design
 # Load and embed the logo
-import base64
 def get_logo_base64():
     """Get logo as base64 for embedding in HTML"""
     try:
         with open("Logo.jpg", "rb") as f:
             return base64.b64encode(f.read()).decode()
-    except:
+    except (FileNotFoundError, IOError, OSError):
+        # Logo file not found or unreadable
         return None
 
 logo_base64 = get_logo_base64()
