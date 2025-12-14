@@ -494,7 +494,7 @@ st.sidebar.markdown("""
                     
 # Footer
 st.markdown("---")
-st.caption("🤖 Powered by GPT-4, Pinecone Vector Search, RapidAPI LinkedIn Jobs, and CareerLens AI")
+st.caption("🤖 Powered by Azure OpenAI, Pinecone Vector Search, RapidAPI LinkedIn Jobs, and CareerLens AI")
 
 # Application startup
 if __name__ == "__main__":

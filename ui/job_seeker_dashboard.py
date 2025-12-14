@@ -88,7 +88,7 @@ def main_analyzer_page():
     <h1 class="main-title"><span class="brand-span">Career</span><span class="lens-span">Lens</span></h1>
     <p class="main-tagline">AI Career Copilot • Hong Kong</p>
     """, unsafe_allow_html=True)
-    st.markdown("Upload your CV and let **GPT-4** find matching jobs globally, ranked by match quality!")
+    st.markdown("Upload your CV and let **AI** find matching jobs globally, ranked by match quality!")
 
     # Define helper functions
     def smart_select_match(value, options):
@@ -123,10 +123,10 @@ def main_analyzer_page():
     if cv_file:
         st.success(f"✅ Uploaded: **{cv_file.name}**")
 
-        if st.button("🔍 Analyze with GPT-4", type="primary", use_container_width=True, key="analyze_button"):
+        if st.button("🔍 Analyze with AI", type="primary", use_container_width=True, key="analyze_button"):
 
             # STEP 1: Analyze Resume with WebSocket keepalive
-            with ProgressTracker("Analyzing your resume with GPT-4", total_steps=3) as tracker:
+            with ProgressTracker("Analyzing your resume with AI", total_steps=3) as tracker:
                 try:
                     tracker.update(1, "Extracting text from your CV...")
                     _websocket_keepalive("Extracting text")
@@ -180,7 +180,7 @@ def main_analyzer_page():
 
                     # Display analysis results
                     st.markdown("---")
-                    st.subheader("🤖 GPT-4 Career Analysis")
+                    st.subheader("🤖 AI Career Analysis")
 
                     col1, col2, col3 = st.columns(3)
 
@@ -196,7 +196,7 @@ def main_analyzer_page():
                         st.metric("📊 Seniority", ai_analysis.get('seniority_level', '') or 'Not detected')
 
                     # Skills detected by GPT-4
-                    st.markdown("### 💡 Skills Detected by GPT-4")
+                    st.markdown("### 💡 Skills Detected by AI")
                     skills = ai_analysis.get('skills', [])
                     if skills:
                         # Create skill tags
@@ -281,7 +281,7 @@ def main_analyzer_page():
             ### 📋 How it works:
 
             1. **📄 Upload** your CV (PDF or DOCX)
-            2. **🤖 GPT-4** analyzes your skills, experience, and ideal roles
+            2. **🤖 AI** analyzes your skills, experience, and ideal roles
             3. **🔍 Search** LinkedIn jobs via RapidAPI (global search)
             4. **🎯 Rank** all jobs by match quality using AI
             5. **📊 See** your best matches with detailed scores!
