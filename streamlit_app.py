@@ -809,11 +809,11 @@ def main_analyzer_page():
     logo_html = ""
     if os.path.exists("CareerLens_Logo.png"):
         try:
-            import base64
             with open("CareerLens_Logo.png", "rb") as f:
                 logo_data = base64.b64encode(f.read()).decode()
             logo_html = f'<img src="data:image/png;base64,{logo_data}" class="main-logo-top-right">'
-        except Exception:
+        except (FileNotFoundError, IOError, OSError) as e:
+            # Logo file not accessible, will use text-only header
             pass
     
     st.markdown(f"""
@@ -828,7 +828,6 @@ def main_analyzer_page():
             right: 0;
             width: 150px;
             height: auto;
-            max-width: 150px;
         }}
         .main-title {{
             font-family: 'Montserrat', sans-serif;
