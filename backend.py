@@ -996,6 +996,8 @@ class ResumeParser:
         """Extract text from PDF file object"""
         try:
             PyPDF2 = _get_pypdf2()
+            # Reset file position to beginning
+            pdf_file.seek(0)
             text = ""
             pdf_reader = PyPDF2.PdfReader(pdf_file)
             for page in pdf_reader.pages:
@@ -1010,6 +1012,8 @@ class ResumeParser:
         """Extract text from DOCX file object"""
         try:
             from docx import Document  # Lazy load when needed
+            # Reset file position to beginning
+            docx_file.seek(0)
             doc = Document(docx_file)
             text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
             return text
@@ -1042,7 +1046,15 @@ class ResumeParser:
             text = self.extract_text(file_obj, filename)
             
             if not text or len(text.strip()) < 50:
-                raise ValueError("Could not extract sufficient text from resume")
+                file_type = filename.split('.')[-1].upper() if '.' in filename else 'file'
+                raise ValueError(
+                    f"Could not extract sufficient text from resume. "
+                    f"This may happen if:\n"
+                    f"• The {file_type} is scanned/image-based (try a text-based document)\n"
+                    f"• The file is corrupted or password-protected\n"
+                    f"• The document is mostly empty\n"
+                    f"Please try uploading a different format (PDF or DOCX with selectable text)."
+                )
             
             resume_data = {
                 'raw_text': text,

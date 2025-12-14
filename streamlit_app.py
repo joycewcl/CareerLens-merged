@@ -149,137 +149,9 @@ if 'token_tracker' not in st.session_state:
 # ============================================================================
 # CAREERLENS DASHBOARD FEATURES
 # ============================================================================
-
-def display_skill_matching_matrix(user_profile):
-    """Display skill matching calculation matrix (from CareerLens)"""
-    st.markdown("---")
-    st.markdown("### 📊 How Job Ranking Works")
-    
-    user_skills = user_profile.get('hard_skills', '') if user_profile else ''
-    if not user_skills:
-        user_skills = user_profile.get('skills', '') if user_profile else ''
-    
-    if not user_skills:
-        st.info("💡 **Skill-Based Ranking**: Jobs are ranked by how many required skills you match. Upload your CV to see your skills analyzed.")
-        return
-    
-    user_skills_list = [s.strip() for s in str(user_skills).split(',') if s.strip()]
-    
-    if not user_skills_list:
-        st.info("💡 **Skill-Based Ranking**: Jobs are ranked by how many required skills you match.")
-        return
-    
-    st.markdown("#### Your Skills")
-    skills_display = ", ".join(user_skills_list[:10])
-    if len(user_skills_list) > 10:
-        skills_display += f" (+{len(user_skills_list) - 10} more)"
-    st.markdown(f"**{len(user_skills_list)} skills identified:** {skills_display}")
-    
-    st.markdown("---")
-    
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
-        st.markdown("""
-        **Ranking Formula:**
-        
-        ```
-        Skill Match Score = Matched Skills / Required Skills
-        ```
-        
-        **Example:**
-        - Job requires: Python, SQL, React, Docker
-        - You have: Python, SQL, React
-        - **Score: 3/4 = 75%**
-        """)
-    
-    with col2:
-        st.markdown("""
-        **Ranking Logic:**
-        
-        1. ✅ Jobs are fetched from job boards
-        2. 🔍 Your skills are matched against each job
-        3. 📊 Jobs sorted by match score (highest first)
-        4. 🎯 Top matches appear at the top
-        """)
-
-
-def display_market_positioning_dashboard(matched_jobs, user_profile):
-    """Display Dashboard with 3 key metric cards (from CareerLens)"""
-    if not matched_jobs:
-        return
-    
-    # Calculate average match score
-    avg_match_score = 0
-    for result in matched_jobs:
-        if isinstance(result, dict):
-            score = result.get('combined_score', result.get('combined_match_score', 0))
-            avg_match_score += score
-    avg_match_score = avg_match_score / len(matched_jobs) if matched_jobs else 0
-    
-    # Normalize score if it's already a percentage
-    if avg_match_score > 1:
-        match_score_pct = int(avg_match_score)
-    else:
-        match_score_pct = int(avg_match_score * 100)
-    
-    if match_score_pct >= 80:
-        match_delta = "Excellent fit"
-    elif match_score_pct >= 60:
-        match_delta = "Good fit"
-    else:
-        match_delta = "Room to improve"
-    
-    # Calculate salary band
-    salary_min, salary_max = calculate_salary_band(matched_jobs)
-    avg_salary = (salary_min + salary_max) // 2
-    
-    # Calculate skill gaps
-    user_skills = user_profile.get('hard_skills', '') or user_profile.get('skills', '')
-    all_job_skills = []
-    for result in matched_jobs:
-        job = result.get('job', result)
-        job_skills = job.get('skills', []) or job.get('matched_skills', [])
-        all_job_skills.extend(job_skills)
-    
-    user_skills_list = [s.lower().strip() for s in str(user_skills).split(',') if s.strip()]
-    skill_gaps = set()
-    for job_skill in all_job_skills:
-        if isinstance(job_skill, str):
-            job_skill_lower = job_skill.lower().strip()
-            if job_skill_lower and not any(us in job_skill_lower or job_skill_lower in us for us in user_skills_list):
-                skill_gaps.add(job_skill_lower)
-    
-    num_skill_gaps = min(len(skill_gaps), 20)  # Cap at 20
-    
-    if num_skill_gaps <= 3:
-        gap_delta = "Well positioned"
-    elif num_skill_gaps <= 7:
-        gap_delta = "Some upskilling needed"
-    else:
-        gap_delta = "Focus on learning"
-    
-    st.markdown("### 📊 Your Market Position Dashboard")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.metric("🎯 Match Score", f"{match_score_pct}%", match_delta)
-    
-    with col2:
-        st.metric("💰 Est. Salary", f"HKD {avg_salary // 1000}k", "Market rate")
-    
-    with col3:
-        st.metric("📈 Skill Gaps", f"{num_skill_gaps}", gap_delta)
-    
-    # Show top skill gaps if any
-    if skill_gaps:
-        with st.expander("🔧 Top Skills to Develop"):
-            gap_list = list(skill_gaps)[:10]
-            cols = st.columns(2)
-            for i, skill in enumerate(gap_list):
-                with cols[i % 2]:
-                    st.write(f"• {skill}")
+# Note: display_skill_matching_matrix and display_market_positioning_profile 
+# are now imported from modules.ui.dashboard to avoid duplication.
+# The unified versions support both job seeker page and market dashboard formats.
 
 
 def display_resume_generator_ui(job, user_profile, resume_text=None):
@@ -721,8 +593,15 @@ try:
         display_market_positioning_profile,
         display_refine_results_section,
         display_ranked_matches_table,
-        display_match_breakdown
+        display_match_breakdown,
+        calculate_match_scores,
+        display_skill_matching_matrix
     )
+    # Alias for backwards compatibility
+    display_market_positioning_dashboard = display_market_positioning_profile
+    from modules.semantic_search import SemanticJobSearch, fetch_jobs_with_cache
+    from modules.utils import get_embedding_generator, get_job_scraper
+    from modules.utils.config import _determine_index_limit
     MODULES_AVAILABLE = True
     WEBSOCKET_UTILS_AVAILABLE = True
 except ImportError as e:
@@ -864,9 +743,30 @@ if time.time() - st.session_state.get('ws_last_activity', time.time()) > 30:
         pass
 
 # Limit search history size
-MAX_SEARCH_HISTORY = 20
+MAX_SEARCH_HISTORY = 5  # Keep last 5 searches
+
+def save_search_to_history(search_query, location, results):
+    """Save search results to history for preservation"""
+    if not results:
+        return
+    
+    search_entry = {
+        'timestamp': time.time(),
+        'query': search_query,
+        'location': location,
+        'result_count': len(results),
+        'results': results[:10]  # Keep only top 10 for memory efficiency
+    }
+    
+    # Add to beginning of list (most recent first)
+    st.session_state.search_history.insert(0, search_entry)
+    
+    # Limit history size
+    if len(st.session_state.search_history) > MAX_SEARCH_HISTORY:
+        st.session_state.search_history = st.session_state.search_history[:MAX_SEARCH_HISTORY]
+
 if len(st.session_state.search_history) > MAX_SEARCH_HISTORY:
-    st.session_state.search_history = st.session_state.search_history[-MAX_SEARCH_HISTORY:]
+    st.session_state.search_history = st.session_state.search_history[:MAX_SEARCH_HISTORY]
 
 # Run memory cleanup after session state is initialized (if modules available)
 if MODULES_AVAILABLE:
@@ -902,7 +802,7 @@ def main_analyzer_page():
         }
         .main-tagline {
             text-align: center;
-            color: var(--text-secondary);
+            color: var(--text-secondary-light);
             text-transform: uppercase;
             letter-spacing: 2px;
             font-size: 0.9rem;
@@ -1434,158 +1334,141 @@ def job_recommendations_page(job_seeker_id=None):
         }
         st.info(f"⏱️ Estimated time: {time_estimates.get(search_mode, '~60 seconds')}")
     # -------------------------------------------------------
-    # 🔎 STEP 2: Search Jobs via RapidAPI (SAFE VERSION)
+    # 🔎 STEP 2: Search Jobs using Unified SemanticJobSearch
     # -------------------------------------------------------
-    # Use ProgressTracker to maintain WebSocket connection during long operations
-    with ProgressTracker(f"Searching {num_jobs_to_search} jobs", total_steps=5) as tracker:
-
-        try:
-            # ----------------------------------------------------
-            # 1) Load job seeker ID safely
-            # ----------------------------------------------------
-            tracker.update(1, "Loading profile settings...")
-            _websocket_keepalive("Loading profile")
-            
-            current_id = st.session_state.get("job_seeker_id")
-
-            if not current_id:
-                st.warning("⚠ job_seeker_id not found in session — using default search settings.")
-                search_fields = {
-                    "primary_role": "",
-                    "simple_search_terms": "",
-                    "location_preference": "Hong Kong",
-                    "hard_skills": ""
-                }
-            else:
-                # ----------------------------------------------------
-                # 2) Load DB Search Fields
-                # ----------------------------------------------------
-                try:
-                    search_fields = get_job_seeker_search_fields(current_id)
-                except Exception as db_err:
-                    st.error(f"❌ Database error when loading search settings: {db_err}")
-                    search_fields = None
-
-                if not search_fields:
-                    st.warning("⚠ No stored search preferences found — using default search settings.")
-                    search_fields = {
-                        "primary_role": "",
-                        "simple_search_terms": "",
-                        "location_preference": "Hong Kong",
-                        "hard_skills": ""
-                    }
-
-            # Extract fields
-            primary_role        = search_fields.get("primary_role", "")
-            simple_search_terms = search_fields.get("simple_search_terms", "")
-            location_preference = search_fields.get("location_preference", "Hong Kong")
-            hard_skills         = search_fields.get("hard_skills", "")
-
-            tracker.update(2, "Preparing search query...")
-            _websocket_keepalive("Preparing query")
-            
-            # Construct resume_data with all fields
-                        
-            resume_data = {
-                "education_level": job_seeker_data.get("education_level", ""),
-                "major": job_seeker_data.get("major", ""),
-                "graduation_status": job_seeker_data.get("graduation_status", ""),
-                "university_background": job_seeker_data.get("university_background", ""),
-                "languages": job_seeker_data.get("languages", ""),
-                "certificates": job_seeker_data.get("certificates", ""),
-                "hard_skills": job_seeker_data.get("hard_skills", ""),
-                "soft_skills": job_seeker_data.get("soft_skills", ""),
-                "work_experience": job_seeker_data.get("work_experience", ""),
-                "project_experience": job_seeker_data.get("project_experience", ""),
-                "location_preference": job_seeker_data.get("location_preference", ""),
-                "industry_preference": job_seeker_data.get("industry_preference", ""),
-                "salary_expectation": job_seeker_data.get("salary_expectation", ""),
-                "benefits_expectation": job_seeker_data.get("benefits_expectation", ""),
-                "primary_role": job_seeker_data.get("primary_role", ""),
-                "simple_search_terms": job_seeker_data.get("simple_search_terms", ""),
-            }
-
-            # Construct ai_analysis dict, which can focus on skills, role, location, etc.
-            ai_analysis = {
-                "education_level": resume_data["education_level"],
-                "major": resume_data["major"],
-                "graduation_status": resume_data["graduation_status"],
-                "university_background": resume_data["university_background"],
-                "languages": [lang.strip() for lang in resume_data["languages"].split(",")] if resume_data["languages"] else [],
-                "certificates": [cert.strip() for cert in resume_data["certificates"].split(",")] if resume_data["certificates"] else [],
-                "skills": [skill.strip() for skill in resume_data["hard_skills"].split(",")] if resume_data["hard_skills"] else [],
-                "soft_skills": [skill.strip() for skill in resume_data["soft_skills"].split(",")] if resume_data["soft_skills"] else [],
-                "work_experience": resume_data["work_experience"],
-                "project_experience": resume_data["project_experience"],
-                "location_preference": resume_data["location_preference"],
-                "industry_preference": resume_data["industry_preference"],
-                "salary_expectation": resume_data["salary_expectation"],
-                "benefits_expectation": resume_data["benefits_expectation"],
-                "primary_role": resume_data["primary_role"],
-                "simple_search_terms": resume_data["simple_search_terms"],
-            }
+    # Search button to trigger job search
+    search_button = st.button("🔍 Search Jobs", type="primary", use_container_width=True)
     
-            # ----------------------------------------------------
-            # 3) Build search keyword string
-            # ----------------------------------------------------
-            search_keywords = ", ".join(
-                field for field in [
-                    primary_role,
-                    simple_search_terms,
-                    hard_skills, 
-                ] if field.strip()
-            )
-
-            if not search_keywords:
-                search_keywords = "General"
-
-            # ----------------------------------------------------
-            # 4) Show user what we are searching
-            # ----------------------------------------------------
-            st.info(
-                f"📡 Searching jobs via RapidAPI:\n\n"
-                f"**Keywords:** {search_keywords}\n"
-                f"**Location:** {location_preference}"
-            )
-
-            tracker.update(3, "Connecting to job search API...")
-            _websocket_keepalive("Connecting to API")
-
-            # ----------------------------------------------------
-            # 5) Search and Match Jobs via Backend (SINGLE search - no duplicates)
-            # ----------------------------------------------------
-            tracker.update(4, f"Searching & matching {num_jobs_to_search} jobs...")
-            _websocket_keepalive("Searching jobs")
-
-            matched_jobs = backend.search_and_match_jobs(
-                resume_data=resume_data,
-                ai_analysis=ai_analysis,
-                num_jobs=num_jobs_to_search,
-                search_keywords=search_keywords,
-                location=location_preference
-            )
-            
-            tracker.update(5, "Search complete!")
-            _websocket_keepalive("Complete")
-            
-            # Better error feedback for users
-            if not matched_jobs:
-                st.warning(
-                    "⚠️ **No jobs found.** This could be due to:\n\n"
-                    "• **Rate limit**: RapidAPI free tier has limited requests. Wait a few minutes.\n"
-                    "• **Search terms**: Try broader keywords in your profile.\n"
-                    "• **Location**: Try a different location preference.\n"
-                    "• **API issues**: Check if your RapidAPI key is valid."
-                )
-        except Exception as e:
-            st.error(
-                f"❌ **Search failed:** {str(e)}\n\n"
-                "**Troubleshooting:**\n"
-                "• Check your internet connection\n"
-                "• Verify RapidAPI key is configured correctly\n"
-                "• Try again in a few minutes if rate limited"
-            )
+    matched_jobs = st.session_state.get('matched_jobs', [])
+    
+    if search_button:
+        if not MODULES_AVAILABLE:
+            st.error("⚠️ Search modules not available. Please check your installation.")
             matched_jobs = []
+        else:
+            # Use ProgressTracker to maintain WebSocket connection during long operations
+            with ProgressTracker(f"Searching {num_jobs_to_search} jobs", total_steps=6) as tracker:
+                try:
+                    # ----------------------------------------------------
+                    # 1) Prepare search query
+                    # ----------------------------------------------------
+                    tracker.update(1, "Preparing search query...")
+                    _websocket_keepalive("Preparing query")
+                    
+                    hard_skills = job_seeker_data.get("hard_skills", "")
+                    
+                    # Build search keywords from user input
+                    search_keywords = search_query if search_query.strip() else job_seeker_data.get("primary_role", "")
+                    if not search_keywords:
+                        search_keywords = job_seeker_data.get("simple_search_terms", "Hong Kong jobs")
+                    
+                    location_preference = location if location else job_seeker_data.get("location_preference", "Hong Kong")
+                    
+                    st.info(
+                        f"📡 Searching jobs:\n\n"
+                        f"**Keywords:** {search_keywords}\n"
+                        f"**Location:** {location_preference}"
+                    )
+        
+                    # ----------------------------------------------------
+                    # 2) Fetch jobs using unified job scraper
+                    # ----------------------------------------------------
+                    tracker.update(2, "Fetching jobs from job boards...")
+                    _websocket_keepalive("Connecting to job API")
+                    
+                    scraper = get_job_scraper()
+                    if scraper is None:
+                        st.error("⚠️ Job scraper not configured. Please check your RAPIDAPI_KEY.")
+                        matched_jobs = []
+                    else:
+                        jobs = fetch_jobs_with_cache(
+                            scraper,
+                            search_keywords,
+                            location=location_preference,
+                            max_rows=num_jobs_to_search,
+                            job_type="fulltime" if "FULLTIME" in employment_types else None,
+                            country=country,
+                            force_refresh=False
+                        )
+                        
+                        if not jobs:
+                            st.warning(
+                                "⚠️ **No jobs found.** This could be due to:\n\n"
+                                "• **Rate limit**: API free tier has limited requests. Wait a few minutes.\n"
+                                "• **Search terms**: Try broader keywords.\n"
+                                "• **Location**: Try a different location.\n"
+                            )
+                            matched_jobs = []
+                        else:
+                            # ----------------------------------------------------
+                            # 3) Initialize SemanticJobSearch and index jobs
+                            # ----------------------------------------------------
+                            tracker.update(3, f"Indexing {len(jobs)} jobs...")
+                            _websocket_keepalive("Creating job embeddings")
+                            
+                            embedding_gen = get_embedding_generator()
+                            if embedding_gen is None:
+                                st.error("⚠️ Embedding generator not configured.")
+                                matched_jobs = []
+                            else:
+                                desired_matches = min(num_jobs_to_show, len(jobs))
+                                jobs_to_index_limit = _determine_index_limit(len(jobs), desired_matches)
+                                
+                                search_engine = SemanticJobSearch(embedding_gen)
+                                search_engine.index_jobs(jobs, max_jobs_to_index=jobs_to_index_limit)
+                                
+                                # ----------------------------------------------------
+                                # 4) Create resume query for semantic search
+                                # ----------------------------------------------------
+                                tracker.update(4, "Creating search embedding...")
+                                _websocket_keepalive("Creating resume embedding")
+                                
+                                # Build resume query text from job seeker data
+                                resume_query = f"""
+                                {job_seeker_data.get('primary_role', '')}
+                                {job_seeker_data.get('simple_search_terms', '')}
+                                {hard_skills}
+                                {job_seeker_data.get('soft_skills', '')}
+                                {job_seeker_data.get('work_experience', '')}
+                                {job_seeker_data.get('project_experience', '')}
+                                """
+                                
+                                # ----------------------------------------------------
+                                # 5) Search and rank jobs
+                                # ----------------------------------------------------
+                                tracker.update(5, "Finding best matches...")
+                                _websocket_keepalive("Searching jobs")
+                                
+                                results = search_engine.search(query=resume_query, top_k=num_jobs_to_show)
+                                
+                                if results:
+                                    # Calculate match scores using unified formula (0-100 scale)
+                                    matched_jobs = calculate_match_scores(results, hard_skills)
+                                    
+                                    # Sort by combined score
+                                    matched_jobs.sort(key=lambda x: x.get('combined_score', 0), reverse=True)
+                                    
+                                    # Save to session state
+                                    st.session_state.matched_jobs = matched_jobs
+                                    
+                                    # Save to search history
+                                    save_search_to_history(search_keywords, location_preference, matched_jobs)
+                                    
+                                    tracker.update(6, "Search complete!")
+                                    _websocket_keepalive("Complete")
+                                else:
+                                    matched_jobs = []
+                                    st.warning("⚠️ No matching jobs found. Try different search criteria.")
+                    
+                except Exception as e:
+                    st.error(
+                        f"❌ **Search failed:** {str(e)}\n\n"
+                        "**Troubleshooting:**\n"
+                        "• Check your internet connection\n"
+                        "• Verify API keys are configured correctly\n"
+                        "• Try again in a few minutes if rate limited"
+                    )
+                    matched_jobs = []
 
         # ----------------------------------------
         # 📊 STEP 3: Display Results
@@ -1600,9 +1483,11 @@ def job_recommendations_page(job_seeker_id=None):
             st.info("📊 **Ranking Algorithm:** 60% Semantic Similarity + 40% Skill Match")
 
             # Display top matches
-            for i, job in enumerate(matched_jobs[:num_jobs_to_show], start=1):
-
-                combined = job.get("combined_score", 0)
+            for i, result in enumerate(matched_jobs[:num_jobs_to_show], start=1):
+                # Handle both nested 'job' structure (from SemanticJobSearch) and flat structure
+                job = result.get('job', result)
+                
+                combined = result.get("combined_score", result.get("combined_match_score", 0))
 
                 if combined >= 80:
                     match_emoji, match_label, match_color = "🟢", "Excellent Match", "#D4EDDA"
@@ -1618,16 +1503,20 @@ def job_recommendations_page(job_seeker_id=None):
 
                 with st.expander(expander_title, expanded=i <= 2):
 
-                    # Scores
+                    # Scores - use result for scores, job for job data
+                    semantic_score = result.get('semantic_score', result.get('similarity_score', 0))
+                    skill_match = result.get('skill_match_percentage', result.get('skill_match_score', 0))
+                    matched_count = result.get('matched_skills_count', 0)
+                    
                     col1, col2, col3, col4 = st.columns(4)
                     with col1:
                         st.metric("🎯 Combined Score", f"{combined:.1f}%")
                     with col2:
-                        st.metric("🧠 Semantic Match", f"{job.get('semantic_score', 0):.1f}%")
+                        st.metric("🧠 Semantic Match", f"{semantic_score:.1f}%")
                     with col3:
-                        st.metric("✅ Skill Match", f"{job.get('skill_match_percentage', 0):.1f}%")
+                        st.metric("✅ Skill Match", f"{skill_match:.1f}%")
                     with col4:
-                        st.metric("🔢 Skills Matched", job.get("matched_skills_count", 0))
+                        st.metric("🔢 Skills Matched", matched_count)
 
                     # Job details
                     st.markdown("##### 📋 Job Details")
@@ -1641,8 +1530,8 @@ def job_recommendations_page(job_seeker_id=None):
                         st.write(f"**📅 Posted:** {job.get('posted_date', 'Unknown')}")
                         st.write(f"**💼 Role:** {job.get('title', 'Unknown')}")
 
-                    # Matched skills (candidate has)
-                    matched_skills = job.get("matched_skills", [])
+                    # Matched skills (candidate has) - from result, not job
+                    matched_skills = result.get("matched_skills", job.get("matched_skills", []))
 
                     # Required skills from job (assumes this field exists as a list)
                     required_skills = job.get("required_skills", [])
@@ -2396,7 +2285,10 @@ def market_dashboard_page():
         
         # Main dashboard area - only show after analysis
         if not st.session_state.get('dashboard_ready', False) or not st.session_state.matched_jobs:
-            st.info("👆 Upload your CV in the sidebar and click 'Analyze Profile & Find Matches' to see your market positioning and ranked opportunities.")
+            st.info("👆 Upload your CV in the sidebar to get started. Once uploaded, use the 'Refine Results' section below to search for jobs and see your market positioning.")
+            
+            # Show the Refine Results section even before search to allow user to initiate search
+            display_refine_results_section([], st.session_state.user_profile)
             return
         
         # Display Market Positioning Profile (Top Section)
@@ -2454,7 +2346,7 @@ st.sidebar.markdown("""
     }
     .careerlens-tagline {
         font-family: 'Montserrat', sans-serif;
-        color: var(--text-secondary);
+        color: var(--text-secondary-light);
         text-transform: uppercase;
         letter-spacing: 2px;
         font-size: 0.7rem;
@@ -2477,7 +2369,7 @@ st.sidebar.markdown("""
     /* Navigation Items */
     .nav-item {
         font-family: 'Inter', sans-serif;
-        color: var(--text-secondary) !important;
+        color: var(--text-secondary-light) !important;
         font-size: 0.9rem;
         padding-left: 1.5rem;
         margin: 0.3rem 0;

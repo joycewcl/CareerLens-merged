@@ -12,7 +12,8 @@ def display_match_score_feedback(match_score, missing_keywords, job_title):
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        score_percent = match_score * 100
+        # Handle both 0-1 scale and 0-100 scale scores
+        score_percent = match_score if match_score > 1 else match_score * 100
         
         if score_percent >= 80:
             score_color = "🟢"
@@ -27,7 +28,7 @@ def display_match_score_feedback(match_score, missing_keywords, job_title):
         st.markdown(f"""
         <div style="text-align: center; margin: 1rem 0;">
             <div class="match-score-display">{score_percent:.0f}%</div>
-            <p style="color: var(--text-secondary); margin-top: 0.5rem;">Match Score</p>
+            <p style="color: var(--text-muted); margin-top: 0.5rem;">Match Score</p>
         </div>
         """, unsafe_allow_html=True)
         st.caption(f"**Analysis:** {feedback}")

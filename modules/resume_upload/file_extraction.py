@@ -14,13 +14,33 @@ def extract_text_from_resume(uploaded_file):
             pdf_reader = PyPDF2.PdfReader(uploaded_file)
             text = ""
             for page in pdf_reader.pages:
-                text += page.extract_text() + "\n"
+                extracted = page.extract_text()
+                if extracted:
+                    text += extracted + "\n"
+            
+            # Check if we got any text
+            if not text or len(text.strip()) < 50:
+                st.warning(
+                    "⚠️ Could not extract text from PDF. This may happen if:\n"
+                    "• The PDF is scanned/image-based\n"
+                    "• The PDF is corrupted or password-protected\n\n"
+                    "Please try uploading a DOCX file or a PDF with selectable text."
+                )
+                return None
             return text
         
         elif file_type == 'docx':
             uploaded_file.seek(0)
             doc = Document(uploaded_file)
             text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
+            
+            # Check if we got any text
+            if not text or len(text.strip()) < 50:
+                st.warning(
+                    "⚠️ Could not extract sufficient text from DOCX. "
+                    "The document may be mostly empty or use non-standard formatting."
+                )
+                return None
             return text
         
         elif file_type == 'txt':

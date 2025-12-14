@@ -8,7 +8,8 @@ from .dashboard import (
     display_refine_results_section,
     display_ranked_matches_table,
     display_match_breakdown,
-    display_skill_matching_matrix
+    display_skill_matching_matrix,
+    calculate_match_scores
 )
 from .resume_editor import display_resume_generator, render_structured_resume_editor
 from .match_feedback import display_match_score_feedback
@@ -25,5 +26,6 @@ __all__ = [
     'display_resume_generator',
     'display_skill_matching_matrix',
     'display_match_score_feedback',
-    'render_structured_resume_editor'
+    'render_structured_resume_editor',
+    'calculate_match_scores'
 ]
