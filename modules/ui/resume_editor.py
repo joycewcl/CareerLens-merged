@@ -253,7 +253,7 @@ def display_resume_generator():
     st.markdown(f"""
     <div class="job-card">
         <h3 style="color: var(--primary-accent); margin: 0;">{job['title']}</h3>
-        <p style="margin: 0.5rem 0; color: var(--text-secondary);">🏢 {job['company']} • 📍 {job['location']}</p>
+        <p style="margin: 0.5rem 0; color: var(--text-muted);">🏢 {job['company']} • 📍 {job['location']}</p>
     </div>
     """, unsafe_allow_html=True)
     

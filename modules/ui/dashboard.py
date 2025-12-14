@@ -8,21 +8,79 @@ from modules.utils import get_embedding_generator, get_job_scraper, get_text_gen
 from modules.utils.config import _determine_index_limit
 
 
+def calculate_match_scores(jobs, user_skills_str):
+    """Calculate detailed match scores using main app formula.
+    
+    Formula: 60% semantic similarity + 40% skill match (all on 0-100 scale)
+    Based on _calculate_match_scores from streamlit_app.py
+    """
+    if not user_skills_str:
+        user_skills_str = ''
+    
+    candidate_skills = set([s.lower().strip() for s in str(user_skills_str).split(',') if s.strip()])
+    
+    for job_result in jobs:
+        # Handle both nested 'job' structure and direct job properties
+        job = job_result.get('job', job_result)
+        description = job.get('description', '').lower()
+        title = job.get('title', '').lower()
+        
+        # Count skill matches
+        matched_skills = []
+        for skill in candidate_skills:
+            if skill in description or skill in title:
+                matched_skills.append(skill)
+        
+        # Calculate skill match percentage (0-100 scale)
+        skill_match_pct = (len(matched_skills) / len(candidate_skills) * 100) if candidate_skills else 0
+        
+        # Semantic similarity - handle both 0-1 scale and 0-100 scale
+        semantic_score = job_result.get('similarity_score', 0)
+        if semantic_score <= 1:
+            semantic_score = semantic_score * 100  # Normalize to 0-100
+        
+        # Combined score: 60% semantic + 40% skill match (0-100 scale)
+        combined_score = (0.6 * semantic_score) + (0.4 * skill_match_pct)
+        
+        # Get missing skills
+        job_skills = job.get('skills', [])
+        job_skills_lower = [s.lower().strip() for s in job_skills if isinstance(s, str)]
+        missing_skills = [js for js in job_skills_lower if not any(cs in js or js in cs for cs in candidate_skills)]
+        
+        # Add scores to result (0-100 scale)
+        job_result['skill_match_percentage'] = round(skill_match_pct, 1)
+        job_result['skill_match_score'] = round(skill_match_pct, 1)  # Alias for compatibility
+        job_result['matched_skills'] = list(matched_skills)[:10]
+        job_result['matched_skills_count'] = len(matched_skills)
+        job_result['missing_skills'] = missing_skills[:5]
+        job_result['combined_score'] = round(combined_score, 1)
+        job_result['combined_match_score'] = round(combined_score, 1)  # Alias for compatibility
+        job_result['semantic_score'] = round(semantic_score, 1)
+    
+    return jobs
+
+
 def display_skill_matching_matrix(user_profile):
-    """Display skill matching calculation matrix to help users understand ranking"""
+    """Display skill matching calculation matrix to help users understand ranking
+    
+    Uses layout from dashboard with flexible field access from main app.
+    """
     st.markdown("---")
     st.markdown("### 📊 How Job Ranking Works")
     
-    user_skills = user_profile.get('skills', '') if user_profile else ''
+    # Support both 'hard_skills' and 'skills' fields (from streamlit_app.py)
+    user_skills = user_profile.get('hard_skills', '') if user_profile else ''
+    if not user_skills:
+        user_skills = user_profile.get('skills', '') if user_profile else ''
     
     if not user_skills:
-        st.info("💡 **Skill-Based Ranking**: Jobs are ranked purely by how many required skills you match. Upload your profile to see your skills analyzed.")
+        st.info("💡 **Skill-Based Ranking**: Jobs are ranked by how many required skills you match. Upload your CV to see your skills analyzed.")
         return
     
     user_skills_list = [s.strip() for s in str(user_skills).split(',') if s.strip()]
     
     if not user_skills_list:
-        st.info("💡 **Skill-Based Ranking**: Jobs are ranked purely by how many required skills you match.")
+        st.info("💡 **Skill-Based Ranking**: Jobs are ranked by how many required skills you match.")
         return
     
     st.markdown("#### Your Skills")
@@ -58,14 +116,9 @@ def display_skill_matching_matrix(user_profile):
         **Ranking Logic:**
         
         1. ✅ Jobs are fetched from job boards
-        2. 🔍 Your skills are matched against each job's required skills
-        3. 📊 Jobs are sorted by skill match score (highest first)
-        4. 🎯 Top matches appear at the top of the list
-        
-        **Why this approach?**
-        - Transparent: You see exactly why jobs rank high
-        - Objective: Based on concrete skill requirements
-        - Actionable: Shows which skills to learn
+        2. 🔍 Your skills are matched against each job
+        3. 📊 Jobs sorted by match score (highest first)
+        4. 🎯 Top matches appear at the top
         """)
     
     st.markdown("---")
@@ -98,9 +151,13 @@ def display_skill_matching_matrix(user_profile):
         
         top_match = st.session_state.matched_jobs[0] if st.session_state.matched_jobs else None
         if top_match:
-            job = top_match.get('job', {})
-            job_skills = job.get('skills', [])
-            skill_score = top_match.get('skill_match_score', 0.0)
+            # Handle both nested 'job' structure and direct job properties
+            job = top_match.get('job', top_match)
+            job_skills = job.get('skills', []) or job.get('matched_skills', [])
+            # Handle both 0-1 scale and 0-100 scale scores
+            skill_score = top_match.get('skill_match_score', top_match.get('skill_match_percentage', 0))
+            if skill_score > 1:
+                skill_score = skill_score / 100  # Normalize to 0-1
             matched_count = int(skill_score * len(job_skills)) if job_skills else 0
             
             if job_skills:
@@ -130,23 +187,37 @@ def display_skill_matching_matrix(user_profile):
 
 
 def display_market_positioning_profile(matched_jobs, user_profile):
-    """Display Dashboard with 3 key metric cards: Match Score, Est. Salary, Skill Gaps"""
+    """Display Dashboard with 3 key metric cards: Match Score, Est. Salary, Skill Gaps
+    
+    Uses dashboard layout with flexible data access from main app to handle both
+    job seeker page results and market dashboard results.
+    """
     if not matched_jobs:
         return
     
-    avg_match_score = sum(r.get('combined_match_score', 0) for r in matched_jobs) / len(matched_jobs)
-    match_score_pct = int(avg_match_score * 100)
+    # Calculate average match score - handle both 'combined_score' and 'combined_match_score'
+    # Also handle both 0-1 scale and 0-100 scale (from streamlit_app.py)
+    avg_match_score = 0
+    for result in matched_jobs:
+        if isinstance(result, dict):
+            score = result.get('combined_score', result.get('combined_match_score', 0))
+            avg_match_score += score
+    avg_match_score = avg_match_score / len(matched_jobs) if matched_jobs else 0
+    
+    # Normalize score if it's already a percentage (0-100 scale)
+    if avg_match_score > 1:
+        match_score_pct = int(avg_match_score)
+    else:
+        match_score_pct = int(avg_match_score * 100)
     
     if match_score_pct >= 80:
         match_delta = "Excellent fit"
-        match_delta_color = "normal"
     elif match_score_pct >= 60:
         match_delta = "Good fit"
-        match_delta_color = "off"
     else:
         match_delta = "Room to improve"
-        match_delta_color = "inverse"
     
+    # Calculate salary band
     salary_min, salary_max = calculate_salary_band(matched_jobs)
     avg_salary = (salary_min + salary_max) // 2
     
@@ -162,10 +233,14 @@ def display_market_positioning_profile(matched_jobs, user_profile):
     else:
         salary_delta = "Market rate"
     
-    user_skills = user_profile.get('skills', '')
+    # Calculate skill gaps - support both 'hard_skills' and 'skills' fields
+    user_skills = user_profile.get('hard_skills', '') or user_profile.get('skills', '')
     all_job_skills = []
     for result in matched_jobs:
-        all_job_skills.extend(result['job'].get('skills', []))
+        # Handle both nested 'job' structure and direct job properties
+        job = result.get('job', result)
+        job_skills = job.get('skills', []) or job.get('matched_skills', [])
+        all_job_skills.extend(job_skills)
     
     user_skills_list = [s.lower().strip() for s in str(user_skills).split(',') if s.strip()]
     skill_gaps = set()
@@ -175,26 +250,23 @@ def display_market_positioning_profile(matched_jobs, user_profile):
             if job_skill_lower and not any(us in job_skill_lower or job_skill_lower in us for us in user_skills_list):
                 skill_gaps.add(job_skill_lower)
     
-    num_skill_gaps = len(skill_gaps)
+    num_skill_gaps = min(len(skill_gaps), 20)  # Cap at 20
     
     if num_skill_gaps <= 3:
         gap_delta = "Well positioned"
-        gap_delta_color = "normal"
     elif num_skill_gaps <= 7:
         gap_delta = "Some upskilling needed"
-        gap_delta_color = "off"
     else:
         gap_delta = "Focus on learning"
-        gap_delta_color = "inverse"
     
-    st.markdown("### 📊 Your Dashboard")
+    st.markdown("### 📊 Your Market Position Dashboard")
     
     col1, col2, col3 = st.columns(3)
     
     with col1:
         st.markdown(f"""
         <div class="dashboard-metric-card">
-            <div class="dashboard-metric-label">Match Score</div>
+            <div class="dashboard-metric-label">🎯 Match Score</div>
             <div class="dashboard-metric-value">{match_score_pct}%</div>
         </div>
         """, unsafe_allow_html=True)
@@ -203,7 +275,7 @@ def display_market_positioning_profile(matched_jobs, user_profile):
     with col2:
         st.markdown(f"""
         <div class="dashboard-metric-card">
-            <div class="dashboard-metric-label">Est. Salary</div>
+            <div class="dashboard-metric-label">💰 Est. Salary</div>
             <div class="dashboard-metric-value">HKD {avg_salary // 1000}k</div>
         </div>
         """, unsafe_allow_html=True)
@@ -212,11 +284,20 @@ def display_market_positioning_profile(matched_jobs, user_profile):
     with col3:
         st.markdown(f"""
         <div class="dashboard-metric-card">
-            <div class="dashboard-metric-label">Skill Gaps</div>
+            <div class="dashboard-metric-label">📈 Skill Gaps</div>
             <div class="dashboard-metric-value">{num_skill_gaps}</div>
         </div>
         """, unsafe_allow_html=True)
         st.caption(f"🎯 {gap_delta}")
+    
+    # Show top skill gaps in an expander (from streamlit_app.py)
+    if skill_gaps:
+        with st.expander("🔧 Top Skills to Develop"):
+            gap_list = list(skill_gaps)[:10]
+            cols = st.columns(2)
+            for i, skill in enumerate(gap_list):
+                with cols[i % 2]:
+                    st.write(f"• {skill}")
 
 
 def display_refine_results_section(matched_jobs, user_profile):
@@ -320,18 +401,11 @@ def display_refine_results_section(matched_jobs, user_profile):
                 
                 results = search_engine.search(query=resume_query, top_k=top_match_count, resume_embedding=resume_embedding)
                 
-                user_skills = st.session_state.user_profile.get('skills', '')
-                for result in results:
-                    job_skills = result['job'].get('skills', [])
-                    skill_score, missing_skills = search_engine.calculate_skill_match(user_skills, job_skills)
-                    result['skill_match_score'] = skill_score
-                    result['missing_skills'] = missing_skills
-                    
-                    semantic_score = result.get('similarity_score', 0.0)
-                    combined_score = (semantic_score * 0.6) + (skill_score * 0.4)
-                    result['combined_match_score'] = combined_score
+                # Calculate match scores using main app formula (0-100 scale)
+                user_skills = st.session_state.user_profile.get('hard_skills', '') or st.session_state.user_profile.get('skills', '')
+                results = calculate_match_scores(results, user_skills)
                 
-                results.sort(key=lambda x: x.get('combined_match_score', 0.0), reverse=True)
+                results.sort(key=lambda x: x.get('combined_score', x.get('combined_match_score', 0)), reverse=True)
                 
                 st.session_state.matched_jobs = results
                 st.session_state.dashboard_ready = True
@@ -350,46 +424,25 @@ def display_ranked_matches_table(matched_jobs, user_profile):
     st.markdown("### Top AI-Ranked Opportunities")
     st.caption("💡 **Tip:** Click any row to expand and see full job description, match analysis, and application copilot")
     
-    user_skills = user_profile.get('skills', '')
+    # Support both 'hard_skills' and 'skills' fields
+    user_skills = user_profile.get('hard_skills', '') or user_profile.get('skills', '')
     
-    def calc_skill_match(user_skills_str, job_skills_list):
-        if not user_skills_str or not job_skills_list:
-            return 0.0, []
-        user_skills_lower = [s.lower().strip() for s in str(user_skills_str).split(',') if s.strip()]
-        job_skills_lower = [s.lower().strip() for s in job_skills_list if isinstance(s, str) and s.strip()]
-        if not user_skills_lower or not job_skills_lower:
-            return 0.0, []
-        matched_skills = []
-        for job_skill in job_skills_lower:
-            for user_skill in user_skills_lower:
-                if job_skill in user_skill or user_skill in job_skill:
-                    matched_skills.append(job_skill)
-                    break
-        match_score = len(matched_skills) / len(job_skills_lower) if job_skills_lower else 0.0
-        missing_skills = [s for s in job_skills_lower if s not in matched_skills]
-        return min(match_score, 1.0), missing_skills[:5]
-    
+    # Ensure all results have scores calculated (if not already done)
     for result in matched_jobs:
-        if 'skill_match_score' not in result:
-            job_skills = result['job'].get('skills', [])
-            skill_score, missing_skills = calc_skill_match(user_skills, job_skills)
-            result['skill_match_score'] = skill_score
-            result['missing_skills'] = missing_skills
-        
-        if 'combined_match_score' not in result:
-            semantic_score = result.get('similarity_score', 0.0)
-            skill_score = result.get('skill_match_score', 0.0)
-            combined_score = (semantic_score * 0.6) + (skill_score * 0.4)
-            result['combined_match_score'] = combined_score
+        if 'combined_score' not in result and 'combined_match_score' not in result:
+            # Calculate scores using centralized function
+            calculate_match_scores([result], user_skills)
     
-    matched_jobs.sort(key=lambda x: x.get('combined_match_score', 0.0), reverse=True)
+    # Sort by combined score (0-100 scale)
+    matched_jobs.sort(key=lambda x: x.get('combined_score', x.get('combined_match_score', 0)), reverse=True)
     
     table_data = []
     for i, result in enumerate(matched_jobs):
-        job = result['job']
-        semantic_score = result.get('similarity_score', 0.0)
-        skill_score = result.get('skill_match_score', 0.0)
-        match_score = result.get('combined_match_score', (semantic_score * 0.6) + (skill_score * 0.4))
+        # Handle both nested 'job' structure and direct job properties
+        job = result.get('job', result)
+        
+        # Get scores (0-100 scale)
+        match_score = result.get('combined_score', result.get('combined_match_score', 0))
         
         job_skills = job.get('skills', [])
         matching_skills = []
@@ -405,12 +458,16 @@ def display_ranked_matches_table(matched_jobs, user_profile):
         missing_critical = result.get('missing_skills', [])
         missing_critical_skill = missing_critical[0] if missing_critical else "None"
         
+        # Score is already on 0-100 scale from calculate_match_scores
+        # Handle edge case where old 0-1 scale data might still exist
+        display_score = int(match_score) if match_score > 1 else int(match_score * 100)
+        
         table_data.append({
             'Rank': i + 1,
-            'Match Score': int(match_score * 100),
-            'Job Title': job['title'],
-            'Company': job['company'],
-            'Location': job['location'],
+            'Match Score': display_score,
+            'Job Title': job.get('title', 'Unknown'),
+            'Company': job.get('company', 'Unknown'),
+            'Location': job.get('location', 'Unknown'),
             'Key Matching Skills': matching_skills[:4] if matching_skills else [],
             'Missing Critical Skill': missing_critical_skill,
             '_index': i
@@ -487,33 +544,47 @@ def display_match_breakdown(matched_jobs, user_profile):
         return
     
     selected_result = matched_jobs[st.session_state.selected_job_index]
-    job = selected_result['job']
-    semantic_score = selected_result.get('similarity_score', 0.0)
-    skill_score = selected_result.get('skill_match_score', 0.0)
+    # Handle both nested 'job' structure and direct job properties
+    job = selected_result.get('job', selected_result)
+    
+    # Get scores - handle both 0-1 and 0-100 scales
+    semantic_score = selected_result.get('semantic_score', selected_result.get('similarity_score', 0))
+    skill_score = selected_result.get('skill_match_percentage', selected_result.get('skill_match_score', 0))
     missing_skills = selected_result.get('missing_skills', [])
     
-    user_skills = user_profile.get('skills', '')
-    job_skills = job.get('skills', [])
+    # Normalize to 0-100 scale if needed
+    if semantic_score <= 1:
+        semantic_score = semantic_score * 100
+    if skill_score <= 1:
+        skill_score = skill_score * 100
+    
+    combined_score = selected_result.get('combined_score', selected_result.get('combined_match_score', 0))
+    if combined_score <= 1:
+        combined_score = combined_score * 100
+    
+    # Support both 'hard_skills' and 'skills' fields
+    user_skills = user_profile.get('hard_skills', '') or user_profile.get('skills', '')
+    job_skills = job.get('skills', []) or job.get('matched_skills', [])
     user_skills_list = [s.lower().strip() for s in str(user_skills).split(',') if s.strip()]
     job_skills_list = [s.lower().strip() for s in job_skills if isinstance(s, str) and s.strip()]
     
-    matched_skills_count = 0
-    for js in job_skills_list:
-        if any(us in js or js in us for us in user_skills_list):
-            matched_skills_count += 1
+    matched_skills_count = selected_result.get('matched_skills_count', 0)
+    if matched_skills_count == 0:
+        for js in job_skills_list:
+            if any(us in js or js in us for us in user_skills_list):
+                matched_skills_count += 1
     
     total_required = len(job_skills_list) if job_skills_list else 1
-    skill_overlap_pct = (matched_skills_count / total_required * 100) if total_required > 0 else 0
     
     text_gen = get_text_generator()
     if text_gen is None:
         recruiter_note = "AI analysis unavailable. Please configure Azure OpenAI credentials."
     else:
-        recruiter_note = text_gen.generate_recruiter_note(job, user_profile, semantic_score, skill_score)
+        recruiter_note = text_gen.generate_recruiter_note(job, user_profile, semantic_score / 100, skill_score / 100)
     
     rank_position = st.session_state.selected_job_index + 1 if st.session_state.selected_job_index is not None else 0
     
-    expander_title = f"📋 Rank #{rank_position}: {job['title']} at {job['company']}"
+    expander_title = f"📋 Rank #{rank_position}: {job.get('title', 'Unknown')} at {job.get('company', 'Unknown')}"
     
     with st.expander(expander_title, expanded=True):
         st.markdown("#### 📝 Full Job Description")
@@ -539,21 +610,21 @@ def display_match_breakdown(matched_jobs, user_profile):
             
             st.markdown(f"""
             **Match Score Breakdown:**
-            - **🎯 Skill Match Score (Ranking Factor):** {skill_score:.0%} ({matched_skills_count}/{total_required} skills matched)
-              - This is the primary ranking factor. Jobs are sorted by this score.
-            - **📊 Semantic Similarity Score:** {semantic_score:.0%}
+            - **🎯 Skill Match Score:** {skill_score:.1f}% ({matched_skills_count}/{total_required} skills matched)
+            - **📊 Semantic Similarity Score:** {semantic_score:.1f}%
               - Measures how well your experience contextually aligns with role requirements.
-            - **⚖️ Combined Match Score:** {(semantic_score * 0.6 + skill_score * 0.4):.0%}
+            - **⚖️ Combined Match Score:** {combined_score:.1f}%
               - Weighted combination: 60% semantic + 40% skill overlap
             """)
             
             if matched_skills_count > 0:
-                matched_skills_display = []
-                for js in job_skills_list:
-                    if any(us in js or js in us for us in user_skills_list):
-                        matched_skills_display.append(js)
-                        if len(matched_skills_display) >= 10:
-                            break
+                matched_skills_display = selected_result.get('matched_skills', [])
+                if not matched_skills_display:
+                    for js in job_skills_list:
+                        if any(us in js or js in us for us in user_skills_list):
+                            matched_skills_display.append(js)
+                            if len(matched_skills_display) >= 10:
+                                break
                 if matched_skills_display:
                     st.success(f"✅ **Matched Skills:** {', '.join(matched_skills_display[:10])}")
             
