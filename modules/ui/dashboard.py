@@ -337,7 +337,19 @@ def display_refine_results_section(matched_jobs, user_profile):
             key="force_refresh_jobs_toggle"
         )
         
-        if st.button("🔄 Apply Filters & Refresh", type="primary", use_container_width=True):
+        # Check if user has uploaded a profile
+        has_profile = (
+            st.session_state.get('resume_text') or 
+            (st.session_state.get('user_profile') and st.session_state.user_profile.get('skills'))
+        )
+        
+        button_text = "🔄 Apply Filters & Refresh" if st.session_state.get('matched_jobs') else "🔍 Search Jobs"
+        
+        if st.button(button_text, type="primary", use_container_width=True):
+            if not has_profile:
+                st.warning("⚠️ Please upload your CV in the sidebar first to get personalized job matches.")
+                return
+            
             st.session_state.target_domains = target_domains
             st.session_state.salary_expectation = salary_expectation
             

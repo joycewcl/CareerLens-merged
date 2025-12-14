@@ -802,7 +802,7 @@ def main_analyzer_page():
         }
         .main-tagline {
             text-align: center;
-            color: var(--text-secondary);
+            color: var(--text-secondary-light);
             text-transform: uppercase;
             letter-spacing: 2px;
             font-size: 0.9rem;
@@ -2346,7 +2346,7 @@ st.sidebar.markdown("""
     }
     .careerlens-tagline {
         font-family: 'Montserrat', sans-serif;
-        color: var(--text-secondary);
+        color: var(--text-secondary-light);
         text-transform: uppercase;
         letter-spacing: 2px;
         font-size: 0.7rem;
@@ -2369,7 +2369,7 @@ st.sidebar.markdown("""
     /* Navigation Items */
     .nav-item {
         font-family: 'Inter', sans-serif;
-        color: var(--text-secondary) !important;
+        color: var(--text-secondary-light) !important;
         font-size: 0.9rem;
         padding-left: 1.5rem;
         margin: 0.3rem 0;
