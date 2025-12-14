@@ -96,7 +96,7 @@ def render_styles():
         /* CareerLens Design System - CSS Variables */
         :root {{
             /* Backgrounds */
-            --bg-primary: #0F172A;   /* Deep Midnight Navy */
+            --bg-primary: #1E293B;   /* Side banner background color */
             --bg-secondary: #1E293B; /* Slightly lighter navy for cards/sections */
 
             /* Text */

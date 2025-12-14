@@ -804,33 +804,60 @@ def _get_sidebar_logo_html():
 # APP UI
 def main_analyzer_page():
     """Main Page - CareerLens"""
-    st.markdown("""
+    
+    # Get logo as base64
+    logo_html = ""
+    if os.path.exists("CareerLens_Logo.png"):
+        try:
+            import base64
+            with open("CareerLens_Logo.png", "rb") as f:
+                logo_data = base64.b64encode(f.read()).decode()
+            logo_html = f'<img src="data:image/png;base64,{logo_data}" class="main-logo-top-right">'
+        except Exception:
+            pass
+    
+    st.markdown(f"""
     <style>
-        .main-title {
+        .main-header-container {{
+            position: relative;
+            margin-bottom: 2rem;
+        }}
+        .main-logo-top-right {{
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 150px;
+            height: auto;
+            max-width: 150px;
+        }}
+        .main-title {{
             font-family: 'Montserrat', sans-serif;
             font-size: 3rem;
             font-weight: 700;
             letter-spacing: -1px;
             text-align: center;
             margin-bottom: 1rem;
-        }
-        .main-title .brand-span {
+        }}
+        .main-title .brand-span {{
             color: var(--brand-core);
-        }
-        .main-title .lens-span {
+        }}
+        .main-title .lens-span {{
             color: var(--brand-glow);
-        }
-        .main-tagline {
+        }}
+        .main-tagline {{
             text-align: center;
             color: var(--text-secondary-light);
             text-transform: uppercase;
             letter-spacing: 2px;
             font-size: 0.9rem;
             margin-bottom: 2rem;
-        }
+        }}
     </style>
-    <h1 class="main-title"><span class="brand-span">Career</span><span class="lens-span">Lens</span></h1>
-    <p class="main-tagline">AI Career Copilot • Hong Kong</p>
+    <div class="main-header-container">
+        {logo_html}
+        <h1 class="main-title"><span class="brand-span">Career</span><span class="lens-span">Lens</span></h1>
+        <p class="main-tagline">AI Career Copilot • Hong Kong</p>
+    </div>
     """, unsafe_allow_html=True)
     st.markdown("Upload your CV and let **GPT-4** find matching jobs globally, ranked by match quality!")
 
