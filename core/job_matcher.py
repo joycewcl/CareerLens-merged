@@ -240,6 +240,20 @@ class JobMatcher:
             print(f"❌ Search error: {e}")
             return []
 
+    def analyze_simple_match(self, job_data: tuple, seeker_data: tuple) -> Dict:
+        """Simple match analysis between job and seeker.
+        
+        This is a method wrapper around the module-level analyze_match_simple function.
+        
+        Args:
+            job_data: Tuple of job fields from database query
+            seeker_data: Tuple of seeker fields from database query
+            
+        Returns:
+            Dictionary with match analysis results
+        """
+        return analyze_match_simple(job_data, seeker_data)
+
 
 # ============================================================================
 # MATCH SCORING FUNCTIONS

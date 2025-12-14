@@ -28,6 +28,10 @@ from .visualizations import (
     create_enhanced_visualizations,
     create_job_comparison_radar
 )
+from .resume_upload_page import (
+    resume_upload_page,
+    process_resume_text
+)
 
 __all__ = [
     # Job Seeker Dashboard
@@ -60,4 +64,8 @@ __all__ = [
     # Visualizations
     'create_enhanced_visualizations',
     'create_job_comparison_radar',
+    
+    # Resume Upload
+    'resume_upload_page',
+    'process_resume_text',
 ]

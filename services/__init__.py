@@ -17,6 +17,11 @@ from .linkedin_api import (
     LinkedInJobSearcher,
     get_linkedin_job_searcher
 )
+from .indeed_api import (
+    IndeedJobScraper,
+    IndeedScraperAPI,  # Backward compatibility alias
+    get_indeed_job_scraper
+)
 
 __all__ = [
     # Azure OpenAI
@@ -32,4 +37,8 @@ __all__ = [
     # LinkedIn API
     'LinkedInJobSearcher',
     'get_linkedin_job_searcher',
+    # Indeed API
+    'IndeedJobScraper',
+    'IndeedScraperAPI',
+    'get_indeed_job_scraper',
 ]

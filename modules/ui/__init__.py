@@ -31,6 +31,8 @@ from .pages import (
     market_dashboard_page,
     create_enhanced_visualizations,
     create_job_comparison_radar,
+    resume_upload_page,
+    process_resume_text,
 )
 
 __all__ = [
@@ -65,4 +67,6 @@ __all__ = [
     'market_dashboard_page',
     'create_enhanced_visualizations',
     'create_job_comparison_radar',
+    'resume_upload_page',
+    'process_resume_text',
 ]

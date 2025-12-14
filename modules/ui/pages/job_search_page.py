@@ -6,6 +6,18 @@ This module contains the job recommendations page where job seekers can:
 - View AI-ranked job matches
 - See skill matching analysis
 - Generate tailored resumes for specific jobs
+
+Flow:
+    ui/job_search_page.py
+      ↓
+    services/indeed_api.py (or modules/utils/api_clients.py)
+      → IndeedJobScraper.search_jobs()
+      ↓
+    modules/semantic_search/job_search.py
+      → SemanticJobSearch.search()
+      ↓
+    core/job_matcher.py
+      → JobMatcher.analyze_simple_match()
 """
 
 import streamlit as st

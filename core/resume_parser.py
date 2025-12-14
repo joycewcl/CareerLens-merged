@@ -166,6 +166,21 @@ class ResumeParser:
         except Exception as e:
             raise Exception(f"Error parsing resume: {str(e)}")
 
+    def extract_structured_profile(self, resume_text: str, enable_verification: bool = False, config=None) -> Optional[Dict]:
+        """Extract structured profile from resume with optional two-pass verification.
+        
+        This is a method wrapper around the module-level extract_structured_profile function.
+        
+        Args:
+            resume_text: Full resume text
+            enable_verification: Whether to run second verification pass
+            config: Optional config object
+            
+        Returns:
+            Extracted profile dictionary or None if extraction fails
+        """
+        return extract_structured_profile(resume_text, enable_verification, config)
+
 
 # ============================================================================
 # GPT-4 JOB ROLE DETECTOR

@@ -60,8 +60,33 @@ class EmbeddingGenerator(AzureOpenAIClient):
 
 
 class TextGenerator(AzureOpenAIClient):
-    """Generate text using Azure OpenAI."""
+    """Generate text using Azure OpenAI.
+    
+    This class provides text generation capabilities including:
+    - General text generation
+    - Resume generation tailored to job postings
+    
+    Flow for resume generation:
+        ui/resume_tailor_page.py
+          ↓
+        services/azure_openai.py
+          → TextGenerator.generate_resume()
+          ↓
+        modules/resume_generator/formatters.py
+          → generate_docx_from_json()
+    """
+    
     def generate(self, prompt: str, model: str = None, **kwargs):
+        """Generate text from a prompt.
+        
+        Args:
+            prompt: The prompt to generate text from
+            model: Optional model name (defaults to configured deployment)
+            **kwargs: Additional arguments to pass to the API
+            
+        Returns:
+            Generated text content
+        """
         model = model or Config.AZURE_OPENAI_DEPLOYMENT
         
         if not self.rate_limiter.allow_request():
@@ -80,6 +105,148 @@ class TextGenerator(AzureOpenAIClient):
         )
         
         return response.choices[0].message.content
+
+    def generate_resume(self, user_profile: dict, job_posting: dict, 
+                       raw_resume_text: str = None, model: str = None) -> dict:
+        """Generate a tailored resume based on user profile and job posting.
+        
+        Uses the Context Sandwich approach for optimal results:
+        1. System instructions for resume writing expertise
+        2. Job posting details for targeting
+        3. User profile and experience
+        4. Optional raw resume text for additional context
+        
+        Args:
+            user_profile: Dictionary with name, email, skills, experience, etc.
+            job_posting: Dictionary with title, company, description, skills, etc.
+            raw_resume_text: Optional original resume text for reference
+            model: Optional model name (defaults to configured deployment)
+            
+        Returns:
+            Structured resume data dictionary with header, summary, skills, 
+            experience, education, and certifications sections.
+            Returns None on error.
+        """
+        import json
+        import re
+        
+        model = model or Config.AZURE_OPENAI_DEPLOYMENT
+        
+        if not self.rate_limiter.allow_request():
+            raise Exception("Rate limit exceeded")
+        
+        system_instructions = """You are an expert resume writer with expertise in ATS optimization and career coaching.
+Your task is to create a tailored resume by analyzing the job description and adapting the user's profile.
+Return ONLY valid JSON - no markdown, no additional text, no code blocks."""
+
+        job_description = f"""JOB POSTING TO MATCH:
+Title: {job_posting.get('title', 'N/A')}
+Company: {job_posting.get('company', 'N/A')}
+Description: {job_posting.get('description', 'N/A')[:3000]}
+Required Skills: {', '.join(job_posting.get('skills', [])[:10]) if job_posting.get('skills') else 'N/A'}"""
+
+        structured_profile = f"""STRUCTURED PROFILE:
+Name: {user_profile.get('name', 'N/A')}
+Email: {user_profile.get('email', 'N/A')}
+Phone: {user_profile.get('phone', 'N/A')}
+Location: {user_profile.get('location', 'N/A')}
+LinkedIn: {user_profile.get('linkedin', 'N/A')}
+Summary: {user_profile.get('summary', 'N/A')}
+Experience: {user_profile.get('experience', 'N/A')[:2000]}
+Education: {user_profile.get('education', 'N/A')}
+Skills: {user_profile.get('skills', 'N/A')}
+Certifications: {user_profile.get('certifications', 'N/A')}"""
+
+        raw_resume_section = ""
+        if raw_resume_text:
+            raw_resume_section = f"\n\nORIGINAL RESUME TEXT (for reference):\n{raw_resume_text[:2000]}"
+
+        prompt = f"""{system_instructions}
+
+{job_description}
+
+{structured_profile}{raw_resume_section}
+
+INSTRUCTIONS:
+1. Analyze the job posting and identify key skills, technologies, and qualifications needed
+2. Tailor the profile to match by:
+   - Rewriting the summary to emphasize relevant experience
+   - Highlighting skills that match job requirements
+   - Rewriting experience bullet points to emphasize relevant achievements
+   - Using keywords from the job description for ATS optimization
+3. Focus on achievements and measurable results
+4. Maintain accuracy - only use information from the provided profile
+
+Return your response as a JSON object with this structure:
+{{
+  "header": {{
+    "name": "Full Name",
+    "title": "Professional Title (tailored to job)",
+    "email": "email@example.com",
+    "phone": "phone number",
+    "location": "City, State/Country",
+    "linkedin": "LinkedIn URL or empty string"
+  }},
+  "summary": "2-3 sentence professional summary tailored to the job",
+  "skills_highlighted": ["Skill 1", "Skill 2", "Skill 3", ...],
+  "experience": [
+    {{
+      "company": "Company Name",
+      "title": "Job Title",
+      "dates": "Date Range",
+      "bullets": ["Achievement bullet 1...", "Achievement bullet 2..."]
+    }}
+  ],
+  "education": "Education details",
+  "certifications": "Certifications and achievements"
+}}
+
+Return ONLY the JSON object."""
+
+        try:
+            response = self.client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": system_instructions},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=3000,
+                temperature=0.7,
+                response_format={"type": "json_object"}
+            )
+            
+            self.token_tracker.add_usage(
+                model=model,
+                prompt_tokens=response.usage.prompt_tokens,
+                completion_tokens=response.usage.completion_tokens
+            )
+            
+            content = response.choices[0].message.content
+            
+            # Parse JSON response
+            try:
+                content = content.strip()
+                # Remove markdown code blocks if present
+                if content.startswith("```"):
+                    lines = content.split('\n')
+                    content = '\n'.join(lines[1:-1]) if lines[-1].startswith('```') else '\n'.join(lines[1:])
+                
+                resume_data = json.loads(content)
+                return resume_data
+                
+            except json.JSONDecodeError as e:
+                # Try to extract JSON from the content
+                json_match = re.search(r'\{.*\}', content, re.DOTALL)
+                if json_match:
+                    resume_data = json.loads(json_match.group())
+                    return resume_data
+                else:
+                    print(f"Could not parse JSON response: {e}")
+                    return None
+                    
+        except Exception as e:
+            print(f"Error generating resume: {e}")
+            return None
 
 
 # ============================================================================

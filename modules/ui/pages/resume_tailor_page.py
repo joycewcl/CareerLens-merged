@@ -4,6 +4,17 @@ AI-Powered Tailored Resume Page.
 This module contains the page for generating job-specific resumes with AI:
 - Resume tailoring based on job descriptions
 - Download options (PDF, DOCX, TXT)
+
+Flow:
+    ui/resume_tailor_page.py
+      ↓
+    services/azure_openai.py
+      → TextGenerator.generate_resume()
+      ↓
+    modules/resume_generator/formatters.py
+      → generate_docx_from_json()
+      → generate_pdf_from_json()
+      → format_resume_as_text()
 """
 
 import streamlit as st

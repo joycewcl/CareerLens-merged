@@ -109,6 +109,12 @@ from modules.utils.api_clients import (
     get_job_scraper,
 )
 
+# Import Indeed API from services (new location)
+from services.indeed_api import (
+    IndeedJobScraper,
+    get_indeed_job_scraper,
+)
+
 from modules.utils.helpers import api_call_with_retry
 
 
@@ -525,8 +531,10 @@ __all__ = [
     # LinkedIn searcher
     'LinkedInJobSearcher',
     'get_linkedin_job_searcher',
-    # Indeed scraper
+    # Indeed scraper (both old and new names)
     'IndeedScraperAPI',
+    'IndeedJobScraper',
+    'get_indeed_job_scraper',
     # Rate limiting
     'TokenUsageTracker',
     'RateLimiter',
