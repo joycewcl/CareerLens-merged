@@ -27,12 +27,17 @@ def _load_logo():
     _logo_loaded = True
     from modules.utils.helpers import get_img_as_base64
     
-    logo_paths = ["logo.png", "CareerLens_Logo.png"]
-    for logo_path in logo_paths:
+    logo_configs = [
+        ("logo.png", "image/png"),
+        ("CareerLens_Logo.png", "image/png"),
+        ("Logo.jpg", "image/jpeg")
+    ]
+    
+    for logo_path, mime_type in logo_configs:
         if os.path.exists(logo_path):
             try:
                 logo_base64 = get_img_as_base64(logo_path)
-                _logo_html = f'<img src="data:image/png;base64,{logo_base64}" class="hero-bg-logo">'
+                _logo_html = f'<img src="data:{mime_type};base64,{logo_base64}" class="hero-bg-logo">'
                 return _logo_html
             except (IOError, OSError) as e:
                 # Failed to load logo file - log and continue to next logo
@@ -190,6 +195,14 @@ def render_styles():
             transform: translateY(-2px);
         }}
         
+        .sidebar-logo-image {{
+            display: block;
+            margin: 0 auto 1rem auto;
+            max-width: 180px;
+            width: 100%;
+            height: auto;
+        }}
+        
         .hero-container {{
             background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
             padding: 40px;
@@ -221,11 +234,12 @@ def render_styles():
         }}
         .hero-bg-logo {{
             position: absolute;
-            right: -30px;
-            top: -30px;
-            width: 250px;
-            opacity: 0.15;
-            transform: rotate(-15deg);
+            right: 40px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 350px;
+            max-width: 40%;
+            opacity: 0.9;
             pointer-events: none;
             z-index: 5;
         }}
@@ -233,10 +247,11 @@ def render_styles():
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 150px;
-            height: 150px;
-            right: 20px;
-            top: 20px;
+            width: 200px;
+            height: 100px;
+            right: 40px;
+            top: 50%;
+            transform: translateY(-50%);
         }}
         .hero-logo-initials {{
             font-family: 'Montserrat', sans-serif;
