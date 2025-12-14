@@ -13,11 +13,17 @@ def calculate_match_scores(jobs, user_skills_str):
     
     Formula: 60% semantic similarity + 40% skill match (all on 0-100 scale)
     Based on _calculate_match_scores from streamlit_app.py
+    
+    Edge cases handled:
+    - Empty user skills: skill_match_pct = 0
+    - Out-of-bounds semantic scores: clamped to 0-100
+    - Missing job data: graceful fallbacks
     """
     if not user_skills_str:
         user_skills_str = ''
     
     candidate_skills = set([s.lower().strip() for s in str(user_skills_str).split(',') if s.strip()])
+    total_skills = len(candidate_skills)
     
     for job_result in jobs:
         # Handle both nested 'job' structure and direct job properties
@@ -31,16 +37,25 @@ def calculate_match_scores(jobs, user_skills_str):
             if skill in description or skill in title:
                 matched_skills.append(skill)
         
-        # Calculate skill match percentage (0-100 scale)
-        skill_match_pct = (len(matched_skills) / len(candidate_skills) * 100) if candidate_skills else 0
+        # Handle edge cases for skill match calculation
+        if total_skills == 0:
+            skill_match_pct = 0  # No skills to match against
+        else:
+            skill_match_pct = (len(matched_skills) / total_skills) * 100
         
         # Semantic similarity - handle both 0-1 scale and 0-100 scale
-        semantic_score = job_result.get('similarity_score', 0)
-        if semantic_score <= 1:
-            semantic_score = semantic_score * 100  # Normalize to 0-100
+        raw_semantic = job_result.get('similarity_score', 0)
+        if raw_semantic <= 1:
+            raw_semantic = raw_semantic * 100  # Normalize to 0-100
+        
+        # Ensure semantic_score is bounded (0-100)
+        semantic_score = max(0, min(100, raw_semantic))
         
         # Combined score: 60% semantic + 40% skill match (0-100 scale)
         combined_score = (0.6 * semantic_score) + (0.4 * skill_match_pct)
+        
+        # Ensure combined score is also bounded
+        combined_score = max(0, min(100, combined_score))
         
         # Get missing skills
         job_skills = job.get('skills', [])
