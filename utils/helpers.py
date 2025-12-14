@@ -384,3 +384,96 @@ def _is_streamlit_cloud():
         os.path.exists('/mount/src') or
         'streamlit.app' in os.environ.get('HOSTNAME', '')
     )
+
+
+def check_api_availability(show_messages=True):
+    """Check which APIs are available based on configured credentials.
+    
+    Args:
+        show_messages: Whether to show Streamlit messages about missing APIs
+        
+    Returns:
+        Dictionary with availability status for each API service
+    """
+    from config import Config
+    
+    # Initialize config if not already done
+    if not Config._initialized:
+        Config.setup()
+    
+    availability = {
+        'azure_openai': False,
+        'rapidapi': False,
+        'pinecone': False,
+    }
+    
+    missing_configs = []
+    
+    # Check Azure OpenAI
+    if Config.AZURE_OPENAI_API_KEY and Config.AZURE_OPENAI_ENDPOINT:
+        availability['azure_openai'] = True
+    else:
+        if not Config.AZURE_OPENAI_API_KEY:
+            missing_configs.append('AZURE_OPENAI_API_KEY')
+        if not Config.AZURE_OPENAI_ENDPOINT:
+            missing_configs.append('AZURE_OPENAI_ENDPOINT')
+    
+    # Check RapidAPI
+    if Config.RAPIDAPI_KEY:
+        availability['rapidapi'] = True
+    else:
+        missing_configs.append('RAPIDAPI_KEY')
+    
+    # Check Pinecone
+    if Config.PINECONE_API_KEY:
+        availability['pinecone'] = True
+    else:
+        missing_configs.append('PINECONE_API_KEY')
+    
+    if show_messages and missing_configs:
+        with st.expander("⚠️ Some API services are not configured", expanded=False):
+            st.warning(f"Missing configuration: {', '.join(missing_configs)}")
+            st.info("""
+**To enable all features, configure the following in `.streamlit/secrets.toml`:**
+
+```toml
+AZURE_OPENAI_API_KEY = "your-azure-openai-key"
+AZURE_OPENAI_ENDPOINT = "https://YOUR-RESOURCE.openai.azure.com"
+PINECONE_API_KEY = "your-pinecone-key"
+RAPIDAPI_KEY = "your-rapidapi-key"
+```
+
+**Features affected:**
+- Without Azure OpenAI: Resume generation, AI analysis, profile extraction
+- Without RapidAPI: Job search from LinkedIn and Indeed
+- Without Pinecone: Vector-based semantic job matching
+            """)
+    
+    return availability
+
+
+def require_api(api_name: str, feature_name: str = "this feature") -> bool:
+    """Check if a required API is available and show error if not.
+    
+    Args:
+        api_name: Name of the API ('azure_openai', 'rapidapi', 'pinecone')
+        feature_name: Human-readable name of the feature requiring this API
+        
+    Returns:
+        True if API is available, False otherwise
+    """
+    availability = check_api_availability(show_messages=False)
+    
+    if not availability.get(api_name, False):
+        if api_name == 'azure_openai':
+            st.error(f"❌ Azure OpenAI API is required for {feature_name}")
+            st.info("💡 Configure AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT in .streamlit/secrets.toml")
+        elif api_name == 'rapidapi':
+            st.error(f"❌ RapidAPI is required for {feature_name}")
+            st.info("💡 Configure RAPIDAPI_KEY in .streamlit/secrets.toml to enable job search features")
+        elif api_name == 'pinecone':
+            st.error(f"❌ Pinecone API is required for {feature_name}")
+            st.info("💡 Configure PINECONE_API_KEY in .streamlit/secrets.toml")
+        return False
+    
+    return True

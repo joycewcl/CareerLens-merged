@@ -401,6 +401,12 @@ with st.sidebar:
     display_token_usage()
     
     st.markdown("---")
+    
+    # Display API availability status
+    from utils.helpers import check_api_availability
+    check_api_availability(show_messages=True)
+    
+    st.markdown("---")
     st.subheader("🔧 Database Debug")
     
     if st.button("View All Job Seeker Records"):

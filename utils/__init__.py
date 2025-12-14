@@ -25,7 +25,9 @@ from utils.helpers import (
     _chunked_sleep,
     _is_streamlit_cloud,
     _ensure_websocket_alive,
-    ProgressTracker
+    ProgressTracker,
+    check_api_availability,
+    require_api
 )
 from utils.api_clients import (
     APIMEmbeddingGenerator,
@@ -59,6 +61,8 @@ __all__ = [
     '_is_streamlit_cloud',
     '_ensure_websocket_alive',
     'ProgressTracker',
+    'check_api_availability',
+    'require_api',
     
     # API Clients
     'APIMEmbeddingGenerator',
