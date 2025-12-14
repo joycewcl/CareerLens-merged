@@ -106,6 +106,14 @@ class Config:
         # Azure OpenAI
         cls.AZURE_OPENAI_API_KEY = _get_secret('AZURE_OPENAI_API_KEY')
         cls.AZURE_OPENAI_ENDPOINT = _get_secret('AZURE_OPENAI_ENDPOINT')
+        
+        # Normalize Azure OpenAI endpoint - remove trailing /openai if present
+        # Azure OpenAI SDK expects base endpoint without the /openai path
+        if cls.AZURE_OPENAI_ENDPOINT:
+            cls.AZURE_OPENAI_ENDPOINT = cls.AZURE_OPENAI_ENDPOINT.rstrip('/')
+            if cls.AZURE_OPENAI_ENDPOINT.endswith('/openai'):
+                cls.AZURE_OPENAI_ENDPOINT = cls.AZURE_OPENAI_ENDPOINT[:-7]
+        
         cls.AZURE_OPENAI_API_VERSION = _get_secret('AZURE_OPENAI_API_VERSION', '2024-02-15-preview')
         cls.AZURE_OPENAI_DEPLOYMENT = _get_secret('AZURE_OPENAI_DEPLOYMENT', 'gpt-4o-mini')
         cls.AZURE_OPENAI_EMBEDDING_DEPLOYMENT = _get_secret('AZURE_OPENAI_EMBEDDING_DEPLOYMENT', 'text-embedding-3-small')
@@ -186,3 +194,7 @@ class Config:
             'azure_endpoint': cls.AZURE_OPENAI_ENDPOINT,
             'api_version': cls.AZURE_OPENAI_API_VERSION,
         }
+
+
+# Auto-initialize configuration on module import
+Config.setup()
