@@ -884,33 +884,40 @@ except Exception:
 # APP UI
 def main_analyzer_page():
     """Main Page - CareerLens"""
-    st.markdown("""
+    # Load logo
+    try:
+        with open("Logo.jpg", "rb") as f:
+            logo_base64 = base64.b64encode(f.read()).decode()
+            logo_img = f'<img src="data:image/jpeg;base64,{logo_base64}" style="width: 100%; max-width: 400px; margin: 0 auto 2rem auto; display: block;">'
+    except:
+        logo_img = ""
+    
+    st.markdown(f"""
     <style>
-        .main-title {
+        .main-title {{
             font-family: 'Montserrat', sans-serif;
             font-size: 3rem;
             font-weight: 700;
             letter-spacing: -1px;
             text-align: center;
             margin-bottom: 1rem;
-        }
-        .main-title .brand-span {
+        }}
+        .main-title .brand-span {{
             color: var(--brand-core);
-        }
-        .main-title .lens-span {
+        }}
+        .main-title .lens-span {{
             color: var(--brand-glow);
-        }
-        .main-tagline {
+        }}
+        .main-tagline {{
             text-align: center;
             color: var(--text-secondary);
             text-transform: uppercase;
             letter-spacing: 2px;
             font-size: 0.9rem;
             margin-bottom: 2rem;
-        }
+        }}
     </style>
-    <h1 class="main-title"><span class="brand-span">Career</span><span class="lens-span">Lens</span></h1>
-    <p class="main-tagline">AI Career Copilot • Hong Kong</p>
+    {logo_img}
     """, unsafe_allow_html=True)
     st.markdown("Upload your CV and let **GPT-4** find matching jobs globally, ranked by match quality!")
 
@@ -2435,24 +2442,39 @@ def market_dashboard_page():
         """)
 
 # Sidebar navigation with new design
-st.sidebar.markdown("""
+# Load and embed the logo
+import base64
+def get_logo_base64():
+    """Get logo as base64 for embedding in HTML"""
+    try:
+        with open("Logo.jpg", "rb") as f:
+            return base64.b64encode(f.read()).decode()
+    except:
+        return None
+
+logo_base64 = get_logo_base64()
+logo_html = ""
+if logo_base64:
+    logo_html = f'<img src="data:image/jpeg;base64,{logo_base64}" style="width: 100%; max-width: 300px; margin: 0 auto 1rem auto; display: block;">'
+
+st.sidebar.markdown(f"""
 <style>
     /* CareerLens Logo and Branding */
-    .careerlens-logo {
+    .careerlens-logo {{
         font-family: 'Montserrat', sans-serif;
         font-size: 2rem;
         font-weight: 700;
         text-align: center;
         margin-bottom: 0.5rem;
         letter-spacing: -1px;
-    }
-    .careerlens-logo .brand-span {
+    }}
+    .careerlens-logo .brand-span {{
         color: var(--brand-core);
-    }
-    .careerlens-logo .lens-span {
+    }}
+    .careerlens-logo .lens-span {{
         color: var(--brand-glow);
-    }
-    .careerlens-tagline {
+    }}
+    .careerlens-tagline {{
         font-family: 'Montserrat', sans-serif;
         color: var(--text-secondary);
         text-transform: uppercase;
@@ -2460,10 +2482,10 @@ st.sidebar.markdown("""
         font-size: 0.7rem;
         text-align: center;
         margin-bottom: 2rem;
-    }
+    }}
     
     /* Navigation Section Headers */
-    .nav-section-header {
+    .nav-section-header {{
         font-family: 'Montserrat', sans-serif;
         font-weight: 700;
         font-size: 1.1rem;
@@ -2472,26 +2494,23 @@ st.sidebar.markdown("""
         margin-bottom: 0.5rem;
         padding-left: 0.5rem;
         border-left: 3px solid var(--brand-glow);
-    }
+    }}
     
     /* Navigation Items */
-    .nav-item {
+    .nav-item {{
         font-family: 'Inter', sans-serif;
         color: var(--text-secondary) !important;
         font-size: 0.9rem;
         padding-left: 1.5rem;
         margin: 0.3rem 0;
         cursor: pointer;
-    }
-    .nav-item:hover {
+    }}
+    .nav-item:hover {{
         color: var(--brand-glow) !important;
-    }
+    }}
 </style>
 
-<div class="careerlens-logo">
-    <span class="brand-span">Career</span><span class="lens-span">Lens</span>
-</div>
-<div class="careerlens-tagline">AI Career Copilot • Hong Kong</div>
+{logo_html}
 """, unsafe_allow_html=True)
 
 st.sidebar.markdown("---")

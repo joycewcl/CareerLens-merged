@@ -63,8 +63,12 @@ fastReruns = true
 enforceSerializableSessionState = false
 
 [theme]
-# Use default theme for consistent appearance
-base = "light"
+# Use dark theme matching CareerLens logo design
+base = "dark"
+primaryColor = "#4dd4d4"
+backgroundColor = "#1a2332"
+secondaryBackgroundColor = "#243447"
+textColor = "#ffffff"
 
 [logger]
 # Reduce log level to minimize I/O operations

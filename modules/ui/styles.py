@@ -27,12 +27,14 @@ def _load_logo():
     _logo_loaded = True
     from modules.utils.helpers import get_img_as_base64
     
-    logo_paths = ["logo.png", "CareerLens_Logo.png"]
+    logo_paths = ["Logo.jpg", "logo.png", "CareerLens_Logo.png"]
     for logo_path in logo_paths:
         if os.path.exists(logo_path):
             try:
                 logo_base64 = get_img_as_base64(logo_path)
-                _logo_html = f'<img src="data:image/png;base64,{logo_base64}" class="hero-bg-logo">'
+                # Determine image type based on file extension
+                img_type = "jpeg" if logo_path.endswith('.jpg') or logo_path.endswith('.jpeg') else "png"
+                _logo_html = f'<img src="data:image/{img_type};base64,{logo_base64}" class="hero-bg-logo">'
                 return _logo_html
             except (IOError, OSError) as e:
                 # Failed to load logo file - log and continue to next logo
@@ -90,20 +92,20 @@ def render_styles():
         
         /* CareerLens Design System - CSS Variables */
         :root {{
-            /* Backgrounds */
-            --bg-primary: #0F172A;   /* Deep Midnight Navy */
-            --bg-secondary: #1E293B; /* Slightly lighter navy for cards/sections */
+            /* Backgrounds - Updated to match Logo.jpg dark navy */
+            --bg-primary: #1a2332;   /* Dark Navy from logo */
+            --bg-secondary: #243447; /* Slightly lighter navy for cards/sections */
 
-            /* Text */
+            /* Text - Updated for better contrast */
             --text-primary-light: #FFFFFF;
-            --text-secondary: #94A3B8; /* Muted grey-blue for subtitles */
+            --text-secondary: #B0BEC5; /* Light grey for subtitles */
 
-            /* Brand Colors */
-            --brand-glow: #00D2FF;   /* The bright cyan highlight */
-            --brand-core: #0084C2;   /* The standard logo blue */
+            /* Brand Colors - Updated to match logo cyan */
+            --brand-glow: #4dd4d4;   /* Cyan/turquoise from logo */
+            --brand-core: #2e9bb0;   /* Slightly darker cyan */
             
             /* UI Elements */
-            --accent-gradient: linear-gradient(135deg, #00D2FF 0%, #0084C2 100%);
+            --accent-gradient: linear-gradient(135deg, #4dd4d4 0%, #2e9bb0 100%);
             
             /* Logo Styling */
             --logo-font-size: 60px;
@@ -116,35 +118,35 @@ def render_styles():
             --action-accent: var(--brand-glow);
             
             /* UI Colors */
-            --bg-gray: #f3f4f6;
-            --bg-main: #f3f4f6;
-            --bg-container: #F4F7FC;
-            --card-bg: #FFFFFF;
-            --text-primary: #161616;
-            --border-color: #E0E0E0;
-            --hover-bg: #F0F0F0;
+            --bg-gray: #1a2332;
+            --bg-main: #1a2332;
+            --bg-container: #243447;
+            --card-bg: #2c3e50;
+            --text-primary: #FFFFFF;
+            --border-color: #3a4a5c;
+            --hover-bg: #2c3e50;
             --success-green: #10B981;
             --warning-amber: #F59E0B;
             --error-red: #EF4444;
-            --navy-deep: #1e3a5f;
-            --navy-light: #2C3E50;
-            --btn-text: #0a0a0a;
+            --navy-deep: #1a2332;
+            --navy-light: #243447;
+            --btn-text: #FFFFFF;
         }}
         
         [data-theme="dark"],
         html[data-theme="dark"],
         html[data-theme="dark"] :root {{
-            --primary-accent: #00D2FF;
-            --action-accent: #00D2FF;
-            --bg-main: #161616;
-            --bg-container: #262626;
-            --card-bg: #262626;
-            --text-primary: #F4F4F4;
-            --border-color: #3D3D3D;
-            --hover-bg: #333333;
-            --navy: #1e293b;
-            --cyan: #22d3ee;
-            --bg-gray: #1f2937;
+            --primary-accent: #4dd4d4;
+            --action-accent: #4dd4d4;
+            --bg-main: #1a2332;
+            --bg-container: #243447;
+            --card-bg: #2c3e50;
+            --text-primary: #FFFFFF;
+            --border-color: #3a4a5c;
+            --hover-bg: #2c3e50;
+            --navy: #1a2332;
+            --cyan: #4dd4d4;
+            --bg-gray: #1a2332;
         }}
         
         #MainMenu {{visibility: hidden;}}
@@ -153,7 +155,7 @@ def render_styles():
         .stDeployButton {{display: none;}}
         
         .stApp {{
-            background-color: var(--bg-gray);
+            background-color: var(--bg-primary);
             color: var(--text-primary);
         }}
         
