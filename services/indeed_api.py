@@ -167,11 +167,21 @@ class IndeedJobScraper:
                 return jobs
             else:
                 if response:
-                    if response.status_code == 429:
+                    if response.status_code == 404:
+                        st.error("❌ Indeed API Error 404: Endpoint not found. The service may be temporarily unavailable.")
+                        st.info("💡 Tip: Try using LinkedIn job search instead, or check if the API endpoint has changed.")
+                    elif response.status_code == 401:
+                        st.error("❌ Indeed API Error 401: Unauthorized. Please check your RapidAPI key.")
+                        st.info("💡 Tip: Update your RAPIDAPI_KEY in .streamlit/secrets.toml")
+                    elif response.status_code == 403:
+                        st.error("❌ Indeed API Error 403: Forbidden. Your API key may not have access to this service.")
+                    elif response.status_code == 429:
                         st.error("🚫 Rate limit reached for Indeed API. Please wait a few minutes and try again.")
                     else:
                         error_detail = response.text[:200] if response.text else "No error details"
-                        st.error(f"API Error: {response.status_code} - {error_detail}")
+                        st.error(f"❌ Indeed API Error {response.status_code}: {error_detail}")
+                else:
+                    st.error("❌ No response from Indeed API. Please check your network connection.")
                 return []
                 
         except Exception as e:
