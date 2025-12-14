@@ -439,15 +439,26 @@ def main_analyzer_page():
                     location_preference == "Please select" or not primary_role.strip() or not simple_search_terms.strip()):
                     st.error("Please complete all required fields (marked with *)!")
                 else:
-                    # Save to database
-                    job_seeker_id = save_job_seeker_info(
-                        education_level, major, graduation_status, university_background,
-                        languages, certificates, hard_skills, soft_skills, work_experience,
-                        project_experience, location_preference, industry_preference,
-                        salary_expectation, benefits_expectation,
-                        primary_role,  # Use value from form
-                        simple_search_terms  # Use value from form
-                    )
+                    # Save to database - pass as dictionary
+                    profile_data = {
+                        "education_level": education_level,
+                        "major": major,
+                        "graduation_status": graduation_status,
+                        "university_background": university_background,
+                        "languages": languages,
+                        "certificates": certificates,
+                        "hard_skills": hard_skills,
+                        "soft_skills": soft_skills,
+                        "work_experience": work_experience,
+                        "project_experience": project_experience,
+                        "location_preference": location_preference,
+                        "industry_preference": industry_preference,
+                        "salary_expectation": salary_expectation,
+                        "benefits_expectation": benefits_expectation,
+                        "primary_role": primary_role,
+                        "simple_search_terms": simple_search_terms
+                    }
+                    job_seeker_id = save_job_seeker_info(profile_data)
                     
                     if job_seeker_id:
                         # Save to session state
