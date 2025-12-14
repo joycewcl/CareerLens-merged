@@ -1,16 +1,53 @@
-"""Resume formatting functions for DOCX, PDF, and text export - Modern Professional Templates"""
+# core/resume_generator.py
+"""
+Resume generation and formatting functionality.
+
+This module provides:
+- DOCX resume generation from structured JSON
+- PDF resume generation from structured JSON
+- Plain text resume formatting
+
+Note: Heavy dependencies (docx, reportlab) are lazy-loaded to improve startup time.
+"""
+
 import streamlit as st
 from io import BytesIO
-from docx import Document
-from docx.shared import Inches, Pt, RGBColor
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.table import WD_TABLE_ALIGNMENT
-from docx.oxml.ns import qn
-from docx.oxml import OxmlElement
+from typing import Dict, Any
+
+# Lazy imports for heavy modules - only load when needed
+_docx_loaded = False
+_Document = None
+_Inches = None
+_Pt = None
+_RGBColor = None
+_WD_ALIGN_PARAGRAPH = None
+_qn = None
+_OxmlElement = None
+
+
+def _load_docx_modules():
+    """Lazy load python-docx modules"""
+    global _docx_loaded, _Document, _Inches, _Pt, _RGBColor, _WD_ALIGN_PARAGRAPH, _qn, _OxmlElement
+    if not _docx_loaded:
+        from docx import Document
+        from docx.shared import Inches, Pt, RGBColor
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+        from docx.oxml.ns import qn
+        from docx.oxml import OxmlElement
+        _Document = Document
+        _Inches = Inches
+        _Pt = Pt
+        _RGBColor = RGBColor
+        _WD_ALIGN_PARAGRAPH = WD_ALIGN_PARAGRAPH
+        _qn = qn
+        _OxmlElement = OxmlElement
+        _docx_loaded = True
+    return _Document, _Inches, _Pt, _RGBColor, _WD_ALIGN_PARAGRAPH, _qn, _OxmlElement
 
 
 def set_cell_shading(cell, color):
     """Set background color for a table cell"""
+    _, _, _, _, _, qn, OxmlElement = _load_docx_modules()
     shading_elm = OxmlElement('w:shd')
     shading_elm.set(qn('w:fill'), color)
     cell._tc.get_or_add_tcPr().append(shading_elm)
@@ -18,6 +55,7 @@ def set_cell_shading(cell, color):
 
 def add_horizontal_line(doc, color="2B5797"):
     """Add a horizontal line to the document"""
+    _, _, Pt, _, _, qn, OxmlElement = _load_docx_modules()
     p = doc.add_paragraph()
     p.paragraph_format.space_before = Pt(6)
     p.paragraph_format.space_after = Pt(6)
@@ -34,9 +72,12 @@ def add_horizontal_line(doc, color="2B5797"):
     pPr.append(pBdr)
 
 
-def generate_docx_from_json(resume_data, filename="resume.docx"):
+def generate_docx_from_json(resume_data: Dict[str, Any], filename: str = "resume.docx") -> BytesIO:
     """Generate a modern professional .docx file from structured resume JSON"""
     try:
+        # Lazy load docx modules
+        Document, Inches, Pt, RGBColor, WD_ALIGN_PARAGRAPH, _, _ = _load_docx_modules()
+        
         doc = Document()
         
         # Set document margins
@@ -244,7 +285,7 @@ def generate_docx_from_json(resume_data, filename="resume.docx"):
         return None
 
 
-def generate_pdf_from_json(resume_data, filename="resume.pdf"):
+def generate_pdf_from_json(resume_data: Dict[str, Any], filename: str = "resume.pdf") -> BytesIO:
     """Generate a modern professional PDF file from structured resume JSON"""
     try:
         from reportlab.lib.pagesizes import letter
@@ -479,7 +520,7 @@ def generate_pdf_from_json(resume_data, filename="resume.pdf"):
         return None
 
 
-def format_resume_as_text(resume_data):
+def format_resume_as_text(resume_data: Dict[str, Any]) -> str:
     """Format structured resume JSON as plain text with modern formatting"""
     text = []
     
@@ -574,3 +615,22 @@ def format_resume_as_text(resume_data):
         text.append(resume_data['certifications'])
     
     return '\n'.join(text)
+
+
+class ResumeGenerator:
+    """Class-based interface for resume generation (optional wrapper)"""
+    
+    @staticmethod
+    def generate_docx(resume_data: Dict[str, Any], filename: str = "resume.docx") -> BytesIO:
+        """Generate DOCX resume from JSON data."""
+        return generate_docx_from_json(resume_data, filename)
+    
+    @staticmethod
+    def generate_pdf(resume_data: Dict[str, Any], filename: str = "resume.pdf") -> BytesIO:
+        """Generate PDF resume from JSON data."""
+        return generate_pdf_from_json(resume_data, filename)
+    
+    @staticmethod
+    def format_as_text(resume_data: Dict[str, Any]) -> str:
+        """Format resume as plain text."""
+        return format_resume_as_text(resume_data)

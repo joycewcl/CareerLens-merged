@@ -57,13 +57,13 @@ def _get_cosine_similarity():
     return _cosine_similarity
 
 
-from .config import (
+from utils.config import (
     DEFAULT_EMBEDDING_BATCH_SIZE,
     EMBEDDING_BATCH_DELAY,
     RAPIDAPI_MAX_REQUESTS_PER_MINUTE,
     USE_FAST_SKILL_MATCHING
 )
-from .helpers import (
+from utils.helpers import (
     api_call_with_retry,
     _websocket_keepalive,
     _chunked_sleep,
@@ -224,7 +224,7 @@ class AzureOpenAITextGenerator:
     def generate_resume(self, user_profile, job_posting, raw_resume_text=None):
         """Generate a tailored resume based on user profile and job posting using Context Sandwich approach.
         Returns structured JSON data instead of formatted text."""
-        from .helpers import _websocket_keepalive, api_call_with_retry
+        from utils.helpers import _websocket_keepalive, api_call_with_retry
         
         system_instructions = """You are an expert resume writer with expertise in ATS optimization and career coaching.
 Your task is to create a tailored resume by analyzing the job description and adapting the user's profile.
@@ -355,7 +355,7 @@ IMPORTANT: Return ONLY the JSON object, no markdown code blocks, no additional t
     def calculate_match_score(self, resume_content, job_description, embedding_generator):
         """Calculate match score between resume and job description, and identify missing keywords.
         Returns (None, None) if embeddings cannot be generated."""
-        from .helpers import api_call_with_retry
+        from utils.helpers import api_call_with_retry
         
         try:
             resume_embedding, resume_tokens = embedding_generator.get_embedding(resume_content)
@@ -433,7 +433,7 @@ Return format: {{"keywords": ["keyword1", "keyword2", "keyword3", ...]}}"""
     
     def analyze_seniority_level(self, job_titles):
         """Analyze job titles to determine seniority level"""
-        from .helpers import api_call_with_retry
+        from utils.helpers import api_call_with_retry
         
         if not job_titles:
             return "Mid-Senior Level"
@@ -494,7 +494,7 @@ Choose the most appropriate seniority level based on the job titles."""
     
     def recommend_accreditations(self, job_descriptions, user_skills):
         """Recommend accreditations based on job requirements"""
-        from .helpers import api_call_with_retry
+        from utils.helpers import api_call_with_retry
         
         if not job_descriptions:
             return "PMP or Scrum Master"
@@ -554,7 +554,7 @@ Focus on certifications that are:
     
     def generate_recruiter_note(self, job, user_profile, semantic_score, skill_score):
         """Generate a personalized recruiter note"""
-        from .helpers import api_call_with_retry
+        from utils.helpers import api_call_with_retry
         
         job_title = job.get('title', '')
         job_desc = job.get('description', '')[:2000]
@@ -639,7 +639,7 @@ class IndeedScraperAPI:
         Includes WebSocket keepalive calls to prevent connection timeouts
         during the job search API call.
         """
-        from .helpers import _websocket_keepalive, api_call_with_retry, _ensure_websocket_alive
+        from utils.helpers import _websocket_keepalive, api_call_with_retry, _ensure_websocket_alive
         
         payload = {
             "scraper": {

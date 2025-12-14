@@ -1,9 +1,24 @@
-"""Semantic job search functionality"""
+# core/semantic_search.py
+"""
+Semantic job search using embeddings and caching.
+
+This module provides:
+- SemanticJobSearch class for embedding-based job matching
+- Job caching with TTL support
+- Resume embedding generation and storage
+
+Consolidated from:
+- modules/semantic_search/job_search.py
+- modules/semantic_search/cache.py
+- modules/semantic_search/embeddings.py
+"""
+
 import os
 import hashlib
+import time
 import streamlit as st
-from modules.utils import get_token_tracker, _is_streamlit_cloud, _websocket_keepalive, _ensure_websocket_alive
-from modules.utils.config import DEFAULT_MAX_JOBS_TO_INDEX, USE_FAST_SKILL_MATCHING
+from datetime import datetime, timedelta
+from typing import List, Dict, Optional, Tuple
 
 # Lazy imports for heavy modules - only load when needed
 _np = None
@@ -38,9 +53,235 @@ def _get_chromadb():
     return _chromadb
 
 
+# ============================================================================
+# HELPER IMPORTS (lazy to avoid circular imports)
+# ============================================================================
+
+def _get_utils():
+    """Lazy load utility functions to avoid circular imports"""
+    from utils import get_token_tracker, get_embedding_generator
+    from utils.helpers import _websocket_keepalive, _ensure_websocket_alive, _chunked_sleep
+    from utils.config import DEFAULT_MAX_JOBS_TO_INDEX, USE_FAST_SKILL_MATCHING
+    return {
+        'get_token_tracker': get_token_tracker,
+        'get_embedding_generator': get_embedding_generator,
+        '_websocket_keepalive': _websocket_keepalive,
+        '_ensure_websocket_alive': _ensure_websocket_alive,
+        '_chunked_sleep': _chunked_sleep,
+        'DEFAULT_MAX_JOBS_TO_INDEX': DEFAULT_MAX_JOBS_TO_INDEX,
+        'USE_FAST_SKILL_MATCHING': USE_FAST_SKILL_MATCHING,
+    }
+
+
+def _is_streamlit_cloud():
+    """Detect if running on Streamlit Cloud (ephemeral filesystem)."""
+    return (
+        os.environ.get('STREAMLIT_SHARING_MODE') is not None or
+        os.environ.get('STREAMLIT_SERVER_PORT') is not None or
+        os.path.exists('/mount/src') or
+        'streamlit.app' in os.environ.get('HOSTNAME', '')
+    )
+
+
+# ============================================================================
+# CACHE FUNCTIONS (from modules/semantic_search/cache.py)
+# ============================================================================
+
+def is_cache_valid(cache_entry: Dict) -> bool:
+    """Check if cache entry is still valid (not expired)."""
+    if not cache_entry or not isinstance(cache_entry, dict):
+        return False
+    
+    expires_at = cache_entry.get('expires_at')
+    if expires_at is None:
+        return False
+    
+    if isinstance(expires_at, str):
+        try:
+            expires_at = datetime.fromisoformat(expires_at)
+        except ValueError:
+            try:
+                expires_at = datetime.strptime(expires_at, "%Y-%m-%d %H:%M:%S")
+            except Exception:
+                return False
+    
+    return datetime.now() < expires_at
+
+
+def _build_jobs_cache_key(query: str, location: str, max_rows: int, job_type: str, country: str) -> str:
+    """Create a unique cache key for job searches."""
+    normalized_query = (query or "").strip().lower()
+    return "|".join([
+        normalized_query,
+        (location or "").strip().lower(),
+        str(max_rows),
+        (job_type or "").strip().lower(),
+        (country or "").strip().lower()
+    ])
+
+
+def _ensure_jobs_cache_structure():
+    """Ensure jobs_cache is always a dict keyed by cache keys (handles legacy formats)."""
+    if 'jobs_cache' not in st.session_state or not isinstance(st.session_state.jobs_cache, dict):
+        st.session_state.jobs_cache = {}
+        return
+    cache = st.session_state.jobs_cache
+    if cache and 'jobs' in cache and isinstance(cache['jobs'], list):
+        cache_key = cache.get('cache_key') or _build_jobs_cache_key(
+            cache.get('query', ''),
+            cache.get('location', 'Hong Kong'),
+            cache.get('count', len(cache.get('jobs', []))),
+            cache.get('job_type', 'fulltime'),
+            cache.get('country', 'hk')
+        )
+        st.session_state.jobs_cache = {cache_key: {**cache, 'cache_key': cache_key}}
+
+
+def _get_cached_jobs(query: str, location: str, max_rows: int, job_type: str, country: str) -> Optional[Dict]:
+    """Return cached jobs for a given search signature if valid."""
+    _ensure_jobs_cache_structure()
+    cache_key = _build_jobs_cache_key(query, location, max_rows, job_type, country)
+    cache_entry = st.session_state.jobs_cache.get(cache_key)
+    if not cache_entry:
+        return None
+    if not is_cache_valid(cache_entry):
+        st.session_state.jobs_cache.pop(cache_key, None)
+        return None
+    return cache_entry
+
+
+def _store_jobs_in_cache(query: str, location: str, max_rows: int, job_type: str, 
+                         country: str, jobs: List[Dict], cache_ttl_hours: int = 168) -> Dict:
+    """Persist job results in cache with TTL metadata."""
+    _ensure_jobs_cache_structure()
+    cache_key = _build_jobs_cache_key(query, location, max_rows, job_type, country)
+    now = datetime.now()
+    expires_at = now + timedelta(hours=cache_ttl_hours)
+    st.session_state.jobs_cache[cache_key] = {
+        'jobs': jobs,
+        'count': len(jobs),
+        'timestamp': now.isoformat(),
+        'query': query,
+        'location': location,
+        'job_type': job_type,
+        'country': country,
+        'cache_key': cache_key,
+        'expires_at': expires_at.isoformat()
+    }
+    return st.session_state.jobs_cache[cache_key]
+
+
+def fetch_jobs_with_cache(scraper, query: str, location: str = "Hong Kong", max_rows: int = 25, 
+                          job_type: str = "fulltime", country: str = "hk", 
+                          cache_ttl_hours: int = 168, force_refresh: bool = False) -> List[Dict]:
+    """
+    Fetch jobs with session-level caching to avoid RapidAPI rate limits.
+    Set force_refresh=True to bypass cache for a particular query.
+    
+    Includes WebSocket keepalive to prevent connection timeouts during API calls.
+    """
+    if scraper is None:
+        return []
+    
+    utils = _get_utils()
+    _websocket_keepalive = utils['_websocket_keepalive']
+    
+    _websocket_keepalive("Checking job cache...", force=True)
+    _ensure_jobs_cache_structure()
+    cache_key = _build_jobs_cache_key(query, location, max_rows, job_type, country)
+    
+    if force_refresh:
+        if cache_key in st.session_state.jobs_cache:
+            st.caption("🔁 Forcing a fresh job search (cache bypassed)")
+        st.session_state.jobs_cache.pop(cache_key, None)
+    else:
+        cache_entry = _get_cached_jobs(query, location, max_rows, job_type, country)
+        if cache_entry:
+            timestamp = cache_entry.get('timestamp')
+            expires_at = cache_entry.get('expires_at')
+            expires_in_minutes = None
+            if isinstance(expires_at, str):
+                try:
+                    expires_dt = datetime.fromisoformat(expires_at)
+                    expires_in_minutes = max(0, int((expires_dt - datetime.now()).total_seconds() // 60))
+                except ValueError:
+                    pass
+            if timestamp and isinstance(timestamp, str):
+                try:
+                    ts_dt = datetime.fromisoformat(timestamp)
+                    human_ts = ts_dt.strftime("%b %d %H:%M")
+                except ValueError:
+                    human_ts = timestamp
+            else:
+                human_ts = "earlier"
+            remaining_text = f" (~{expires_in_minutes} min left)" if expires_in_minutes is not None else ""
+            st.caption(f"♻️ Using cached job results from {human_ts}{remaining_text}")
+            _websocket_keepalive()
+            return cache_entry.get('jobs', [])
+    
+    _websocket_keepalive("Fetching jobs from API...")
+    jobs = scraper.search_jobs(query, location, max_rows, job_type, country)
+    
+    if jobs:
+        _websocket_keepalive("Caching job results...")
+        _store_jobs_in_cache(query, location, max_rows, job_type, country, jobs, cache_ttl_hours)
+    
+    _websocket_keepalive("Job fetch complete", force=True)
+    return jobs
+
+
+# ============================================================================
+# EMBEDDING FUNCTIONS (from modules/semantic_search/embeddings.py)
+# ============================================================================
+
+def generate_and_store_resume_embedding(resume_text: str, user_profile: Optional[Dict] = None) -> Optional[List[float]]:
+    """Generate embedding for resume and store in session state.
+    
+    This is called once when resume is uploaded/updated, so we can reuse
+    the embedding for all subsequent searches without regenerating it.
+    """
+    if not resume_text:
+        st.session_state.resume_embedding = None
+        return None
+    
+    utils = _get_utils()
+    get_embedding_generator = utils['get_embedding_generator']
+    get_token_tracker = utils['get_token_tracker']
+    
+    # Build resume query text
+    if user_profile:
+        profile_data = f"{user_profile.get('summary', '')} {user_profile.get('experience', '')} {user_profile.get('skills', '')}"
+        resume_query = f"{resume_text} {profile_data}"
+    else:
+        resume_query = resume_text
+    
+    # Generate embedding
+    embedding_gen = get_embedding_generator()
+    if not embedding_gen:
+        return None
+    
+    embedding, tokens_used = embedding_gen.get_embedding(resume_query)
+    
+    # Update token tracker
+    token_tracker = get_token_tracker()
+    if token_tracker:
+        token_tracker.add_embedding_tokens(tokens_used)
+    
+    if embedding:
+        st.session_state.resume_embedding = embedding
+        return embedding
+    
+    return None
+
+
+# ============================================================================
+# SEMANTIC JOB SEARCH CLASS (from modules/semantic_search/job_search.py)
+# ============================================================================
+
 class SemanticJobSearch:
     """Semantic job search using embeddings"""
-    def __init__(self, embedding_generator, use_persistent_store=True):
+    
+    def __init__(self, embedding_generator, use_persistent_store: bool = True):
         self.embedding_gen = embedding_generator
         self.job_embeddings = []
         self.jobs = []
@@ -84,12 +325,12 @@ class SemanticJobSearch:
             except Exception as e:
                 pass
     
-    def _get_job_hash(self, job):
+    def _get_job_hash(self, job: Dict) -> str:
         """Generate a hash for a job to use as ID."""
         job_str = f"{job.get('title', '')}_{job.get('company', '')}_{job.get('url', '')}"
         return hashlib.md5(job_str.encode()).hexdigest()
     
-    def index_jobs(self, jobs, max_jobs_to_index=None):
+    def index_jobs(self, jobs: List[Dict], max_jobs_to_index: Optional[int] = None):
         """Simplified job indexing: Check if job exists, if not, embed and store.
         
         Includes WebSocket keepalive calls to prevent connection timeouts.
@@ -99,6 +340,12 @@ class SemanticJobSearch:
             self.jobs = []
             self.job_embeddings = []
             return
+        
+        utils = _get_utils()
+        _websocket_keepalive = utils['_websocket_keepalive']
+        _ensure_websocket_alive = utils['_ensure_websocket_alive']
+        get_token_tracker = utils['get_token_tracker']
+        DEFAULT_MAX_JOBS_TO_INDEX = utils['DEFAULT_MAX_JOBS_TO_INDEX']
         
         _websocket_keepalive("Starting job indexing...", force=True)
         
@@ -180,13 +427,19 @@ class SemanticJobSearch:
                 token_tracker.add_embedding_tokens(tokens_used)
             st.success(f"✅ Indexed {len(self.job_embeddings)} jobs")
     
-    def search(self, query=None, top_k=10, resume_embedding=None):
+    def search(self, query: Optional[str] = None, top_k: int = 10, 
+               resume_embedding: Optional[List[float]] = None) -> List[Dict]:
         """Simplified search: Use pre-computed resume embedding if available, otherwise generate from query.
         
         Includes WebSocket keepalive during search operations.
         """
         if not self.job_embeddings:
             return []
+        
+        utils = _get_utils()
+        _websocket_keepalive = utils['_websocket_keepalive']
+        _ensure_websocket_alive = utils['_ensure_websocket_alive']
+        get_token_tracker = utils['get_token_tracker']
         
         _websocket_keepalive("Searching jobs...", force=True)
         
@@ -226,7 +479,7 @@ class SemanticJobSearch:
         
         return results
     
-    def calculate_skill_match(self, user_skills, job_skills):
+    def calculate_skill_match(self, user_skills: str, job_skills: List[str]) -> Tuple[float, List[str]]:
         """Calculate skill-based match score.
         
         Uses semantic matching with embeddings when available, with automatic
@@ -240,6 +493,11 @@ class SemanticJobSearch:
         
         if not user_skills_list or not job_skills_list:
             return 0.0, []
+        
+        utils = _get_utils()
+        USE_FAST_SKILL_MATCHING = utils['USE_FAST_SKILL_MATCHING']
+        _ensure_websocket_alive = utils['_ensure_websocket_alive']
+        get_token_tracker = utils['get_token_tracker']
         
         if USE_FAST_SKILL_MATCHING:
             return self._calculate_skill_match_string_based(user_skills_list, job_skills_list)
@@ -303,7 +561,8 @@ class SemanticJobSearch:
         except Exception as e:
             return self._calculate_skill_match_string_based(user_skills_list, job_skills_list)
     
-    def _calculate_skill_match_string_based(self, user_skills_list, job_skills_list):
+    def _calculate_skill_match_string_based(self, user_skills_list: List[str], 
+                                            job_skills_list: List[str]) -> Tuple[float, List[str]]:
         """Fallback string-based skill matching"""
         user_skills_lower = [s.lower() for s in user_skills_list]
         job_skills_lower = [s.lower() for s in job_skills_list]

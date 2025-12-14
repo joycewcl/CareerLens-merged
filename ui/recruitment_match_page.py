@@ -50,7 +50,7 @@ def recruitment_match_page():
     
     # Import WebSocket utilities with fallback
     try:
-        from modules.utils.helpers import ProgressTracker, _websocket_keepalive
+        from utils.helpers import ProgressTracker, _websocket_keepalive
     except ImportError:
         def _websocket_keepalive(message=None, force=False):
             pass

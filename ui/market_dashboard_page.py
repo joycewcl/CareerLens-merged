@@ -15,7 +15,7 @@ def market_dashboard_page():
     """Market Dashboard Page - Modular CareerLens Dashboard"""
     # Check if modules are available
     try:
-        from modules.utils import _cleanup_session_state, validate_secrets
+        from utils import _cleanup_session_state, validate_secrets
         from ui.components.styles import render_styles
         from ui.components import (
             render_sidebar as modular_render_sidebar,

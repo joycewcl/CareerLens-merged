@@ -31,12 +31,11 @@ def resume_upload_page():
     - Storing profile data in session state for use by other pages
     """
     # Import dependencies inside function to avoid circular imports
-    from modules.resume_upload import extract_text_from_resume, extract_profile_from_resume
-    from core.resume_parser import ResumeParser
+    from core.resume_parser import ResumeParser, extract_text_from_resume, extract_profile_from_resume
     
     # Import WebSocket utilities with fallback
     try:
-        from modules.utils.helpers import ProgressTracker, _websocket_keepalive
+        from utils.helpers import ProgressTracker, _websocket_keepalive
     except ImportError:
         # Fallback implementations
         def _websocket_keepalive(message=None, force=False):
@@ -354,8 +353,7 @@ def process_resume_text(resume_text: str, enable_verification: bool = False) -> 
     Returns:
         Extracted profile dictionary or None if extraction fails
     """
-    from modules.resume_upload import extract_profile_from_resume
-    from core.resume_parser import ResumeParser
+    from core.resume_parser import ResumeParser, extract_profile_from_resume
     
     if not resume_text or len(resume_text.strip()) < 50:
         return None

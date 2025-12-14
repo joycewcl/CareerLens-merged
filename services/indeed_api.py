@@ -57,7 +57,7 @@ class IndeedJobScraper:
         
         # Import chunked sleep for WebSocket keepalive support
         try:
-            from modules.utils.helpers import _chunked_sleep
+            from utils.helpers import _chunked_sleep
             sleep_func = _chunked_sleep
         except ImportError:
             import time
@@ -99,7 +99,7 @@ class IndeedJobScraper:
         """
         # Import WebSocket utilities with fallback
         try:
-            from modules.utils.helpers import (
+            from utils.helpers import (
                 _websocket_keepalive, 
                 api_call_with_retry, 
                 _ensure_websocket_alive

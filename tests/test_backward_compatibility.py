@@ -47,14 +47,23 @@ def test_database_imports_work():
 
 
 def test_analysis_imports_work():
-    """Ensure analysis module imports work"""
+    """Ensure analysis module imports work from core"""
     
-    from modules.analysis.match_analysis import (
-        filter_jobs_by_domains,
+    from core.salary_analyzer import (
+        SalaryAnalyzer,
         filter_jobs_by_salary,
         calculate_salary_band
     )
+    from core.domain_filter import (
+        DomainFilter,
+        filter_jobs_by_domains
+    )
     
+    # Test class imports
+    assert SalaryAnalyzer is not None
+    assert DomainFilter is not None
+    
+    # Test backward compatibility function imports
     assert filter_jobs_by_domains is not None
     assert filter_jobs_by_salary is not None
     assert calculate_salary_band is not None

@@ -25,7 +25,7 @@ def _load_logo():
         return _logo_html
     
     _logo_loaded = True
-    from modules.utils.helpers import get_img_as_base64
+    from utils.helpers import get_img_as_base64
     
     logo_paths = ["logo.png", "CareerLens_Logo.png"]
     for logo_path in logo_paths:

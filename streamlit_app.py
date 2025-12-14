@@ -67,8 +67,8 @@ st.set_page_config(
 # IMPORTS FOR PAGE MODULES AND UTILITIES
 # ============================================================================
 try:
-    from modules.utils import _cleanup_session_state, validate_secrets
-    from modules.utils.helpers import (
+    from utils import _cleanup_session_state, validate_secrets
+    from utils.helpers import (
         _chunked_sleep,
         _websocket_keepalive,
         _ensure_websocket_alive,
