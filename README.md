@@ -98,6 +98,41 @@ Verify you're using Python 3.8+:
 python --version
 ```
 
+**API Configuration Errors:**
+If you encounter 404, 401, or 403 errors when using the application:
+
+1. **404 Not Found:** This usually means the API endpoint is incorrect or unavailable
+   - For Azure OpenAI: Check your `AZURE_OPENAI_ENDPOINT` in `.streamlit/secrets.toml`
+   - Ensure the endpoint URL is in the format: `https://YOUR-RESOURCE.openai.azure.com`
+   - Verify the deployment names match your Azure OpenAI deployments
+
+2. **401 Unauthorized:** Your API key is invalid or expired
+   - Update `AZURE_OPENAI_API_KEY` in `.streamlit/secrets.toml`
+   - Update `RAPIDAPI_KEY` for job search features
+   - Check that your API keys are active and have not expired
+
+3. **403 Forbidden:** Your API key doesn't have access to the requested resource
+   - Verify your Azure OpenAI subscription has access to the required models
+   - Check your RapidAPI subscription includes LinkedIn and Indeed job search APIs
+
+4. **429 Rate Limit:** You've exceeded the API rate limits
+   - Wait a few minutes before trying again
+   - Consider upgrading your API subscription for higher limits
+
+**Missing Secrets File:**
+Create `.streamlit/secrets.toml` with your API credentials:
+```toml
+AZURE_OPENAI_API_KEY = "your-azure-openai-key"
+AZURE_OPENAI_ENDPOINT = "https://YOUR-RESOURCE.openai.azure.com"
+PINECONE_API_KEY = "your-pinecone-key"
+RAPIDAPI_KEY = "your-rapidapi-key"
+```
+
+**Job Search Not Working:**
+- Verify your `RAPIDAPI_KEY` is configured and has an active subscription
+- Check the RapidAPI dashboard for API usage and limits
+- Try the alternative job source (LinkedIn vs Indeed) in the app settings
+
 ## 📦 Key Dependencies
 
 - `streamlit` - Web framework

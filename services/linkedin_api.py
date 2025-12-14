@@ -105,20 +105,30 @@ class LinkedInJobSearcher:
             
             print(f"📊 API Response Status: {response.status_code}")
             
-            if response.status_code == 403:
+            if response.status_code == 404:
+                print("❌ API Error: 404 Not Found")
+                print("   The API endpoint may have changed or is unavailable")
+                print("   Please check the LinkedIn Job Search API documentation")
+                st.error("❌ LinkedIn Job API endpoint not found (404). The service may be temporarily unavailable.")
+                return []
+            
+            elif response.status_code == 403:
                 print("❌ API Key Error: 403 Forbidden")
                 print("   Your RapidAPI key might be invalid or expired")
                 print("   Check: https://rapidapi.com/")
+                st.error("❌ Invalid RapidAPI key. Please update your RAPIDAPI_KEY in .streamlit/secrets.toml")
                 return []
             
             elif response.status_code == 429:
                 print("❌ Rate Limit: 429 Too Many Requests")
                 print("   Wait a few minutes or upgrade your RapidAPI plan")
+                st.warning("⚠️ Rate limit exceeded. Please wait a few minutes before searching again.")
                 return []
             
             elif response.status_code != 200:
                 print(f"❌ API Error: {response.status_code}")
                 print(f"   Response: {response.text[:200]}")
+                st.error(f"❌ LinkedIn Job API Error {response.status_code}: {response.text[:200]}")
                 return []
             
             data = response.json()

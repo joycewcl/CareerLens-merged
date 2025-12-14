@@ -109,7 +109,21 @@ class APIMEmbeddingGenerator:
                 embedding = result['data'][0]['embedding']
                 tokens_used = result['usage'].get('total_tokens', 0) if 'usage' in result else estimated_tokens
                 return embedding, tokens_used
+            elif response:
+                # Provide specific error messages based on status code
+                if response.status_code == 404:
+                    st.error(f"❌ API Error 404: Endpoint not found. Please check your Azure OpenAI endpoint URL: {self.endpoint}")
+                elif response.status_code == 401:
+                    st.error(f"❌ API Error 401: Unauthorized. Please check your Azure OpenAI API key.")
+                elif response.status_code == 403:
+                    st.error(f"❌ API Error 403: Forbidden. Your API key may not have access to this resource.")
+                elif response.status_code == 429:
+                    st.error(f"❌ API Error 429: Rate limit exceeded. Please wait and try again.")
+                else:
+                    st.error(f"❌ API Error {response.status_code}: {response.text[:200]}")
+                return None, 0
             else:
+                st.error("❌ No response from Azure OpenAI API. Please check your network connection.")
                 return None, 0
         except Exception as e:
             st.error(f"Error generating embedding: {e}")
@@ -172,8 +186,20 @@ class APIMEmbeddingGenerator:
                 elif response and response.status_code == 429:
                     st.warning(f"⚠️ Rate limit reached after retries. Skipping batch {batch_num}/{total_batches}.")
                     _websocket_keepalive()
+                elif response and response.status_code == 404:
+                    st.error(f"❌ API Error 404: Endpoint not found. Please check your Azure OpenAI endpoint URL: {self.endpoint}")
+                    break  # Stop processing as the endpoint is invalid
+                elif response and response.status_code == 401:
+                    st.error(f"❌ API Error 401: Unauthorized. Please check your Azure OpenAI API key.")
+                    break  # Stop processing as authentication failed
+                elif response and response.status_code == 403:
+                    st.error(f"❌ API Error 403: Forbidden. Your API key may not have access to this resource.")
+                    break  # Stop processing as access is denied
                 else:
-                    st.warning(f"⚠️ Batch embedding failed, trying individual calls for batch {batch_num}...")
+                    error_msg = f"Batch {batch_num} API Error"
+                    if response:
+                        error_msg += f" {response.status_code}: {response.text[:100]}"
+                    st.warning(f"⚠️ {error_msg}. Trying individual calls...")
                     _websocket_keepalive("Retrying with individual calls...")
                     for idx, text in enumerate(batch):
                         if idx % 2 == 0:
@@ -345,8 +371,22 @@ IMPORTANT: Return ONLY the JSON object, no markdown code blocks, no additional t
                         return None
             else:
                 if response:
-                    error_detail = response.text[:200] if response.text else "No error details"
-                    st.error(f"API Error: {response.status_code} - {error_detail}")
+                    # Provide specific error messages based on status code
+                    if response.status_code == 404:
+                        st.error(f"❌ API Error 404: Endpoint not found. Please check your Azure OpenAI endpoint URL: {self.endpoint}")
+                        st.info("💡 Tip: Ensure your endpoint URL is correct and includes the proper deployment name.")
+                    elif response.status_code == 401:
+                        st.error(f"❌ API Error 401: Unauthorized. Please check your Azure OpenAI API key.")
+                        st.info("💡 Tip: Update your API key in .streamlit/secrets.toml")
+                    elif response.status_code == 403:
+                        st.error(f"❌ API Error 403: Forbidden. Your API key may not have access to this resource.")
+                    elif response.status_code == 429:
+                        st.error(f"❌ API Error 429: Rate limit exceeded. Please wait and try again.")
+                    else:
+                        error_detail = response.text[:200] if response.text else "No error details"
+                        st.error(f"❌ API Error {response.status_code}: {error_detail}")
+                else:
+                    st.error("❌ No response from Azure OpenAI API. Please check your network connection and API credentials.")
                 return None
         except Exception as e:
             st.error(f"Error generating resume: {e}")
@@ -604,7 +644,14 @@ Return ONLY the recruiter note text, no labels or formatting."""
                     self.token_tracker.add_completion_tokens(prompt_tokens, completion_tokens)
                 
                 return result['choices'][0]['message']['content'].strip()
-        except:
+            elif response:
+                # Log but don't show error to user for non-critical feature
+                if response.status_code == 404:
+                    st.warning(f"⚠️ API Error 404: Could not generate recruiter note - endpoint not found.")
+                elif response.status_code in [401, 403]:
+                    st.warning(f"⚠️ API authentication issue - using fallback recruiter note.")
+        except Exception as e:
+            # Silently fall back to default note
             pass
         
         if semantic_score >= 0.7:

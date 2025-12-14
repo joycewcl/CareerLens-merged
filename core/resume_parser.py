@@ -857,12 +857,23 @@ Important:
         response_pass1 = api_call_with_retry(make_request_pass1, max_retries=3)
         
         if not response_pass1 or response_pass1.status_code != 200:
-            if response_pass1 and response_pass1.status_code == 429:
-                st.error("🚫 Rate limit reached for profile extraction after retries. Please wait a few minutes and try again.")
+            if response_pass1:
+                if response_pass1.status_code == 404:
+                    st.error("❌ API Error 404: Endpoint not found. Please check your Azure OpenAI endpoint URL.")
+                    st.info(f"💡 Current endpoint: {text_gen.url.split('/deployments')[0] if text_gen else 'Not configured'}")
+                    st.info("💡 Tip: Update your AZURE_OPENAI_ENDPOINT in .streamlit/secrets.toml")
+                elif response_pass1.status_code == 401:
+                    st.error("❌ API Error 401: Unauthorized. Please check your Azure OpenAI API key.")
+                    st.info("💡 Tip: Update your AZURE_OPENAI_API_KEY in .streamlit/secrets.toml")
+                elif response_pass1.status_code == 403:
+                    st.error("❌ API Error 403: Forbidden. Your API key may not have access to this resource.")
+                elif response_pass1.status_code == 429:
+                    st.error("🚫 Rate limit reached for profile extraction after retries. Please wait a few minutes and try again.")
+                else:
+                    error_detail = response_pass1.text[:200] if response_pass1.text else "No error details"
+                    st.error(f"❌ API Error {response_pass1.status_code}: {error_detail}")
             else:
-                error_detail = response_pass1.text[:200] if response_pass1 and response_pass1.text else "No error details"
-                endpoint_info = f"Endpoint: {text_gen.url.split('/deployments')[0]}" if text_gen else "Endpoint: Not configured"
-                st.error(f"API Error: {response_pass1.status_code if response_pass1 else 'Unknown'} - {error_detail}\n\n{endpoint_info}")
+                st.error("❌ No response from Azure OpenAI API. Please check your network connection and API credentials.")
             return None
         
         result_pass1 = response_pass1.json()
