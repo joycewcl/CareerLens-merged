@@ -13,49 +13,49 @@ from openai import AzureOpenAI
 from config import Config
 from core.rate_limiting import TokenUsageTracker, RateLimiter
     
-    # Check for optional dependencies
-    try:
-        import httpx
-        HTTPX_AVAILABLE = True
-    except ImportError:
-        HTTPX_AVAILABLE = False
-    
-    try:
-        from reportlab.lib.pagesizes import letter
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib.units import inch
-        from reportlab.lib.colors import HexColor, black
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, HRFlowable
-        from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
-        REPORTLAB_AVAILABLE = True
-    except ImportError:
-        REPORTLAB_AVAILABLE = False
+# Check for optional dependencies
+try:
+    import httpx
+    HTTPX_AVAILABLE = True
+except ImportError:
+    HTTPX_AVAILABLE = False
+
+try:
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from reportlab.lib.colors import HexColor, black
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, HRFlowable
+    from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
+    REPORTLAB_AVAILABLE = True
+except ImportError:
+    REPORTLAB_AVAILABLE = False
 
 
-    class AzureOpenAIClient:
-        """Base Azure OpenAI client."""
-        def __init__(self):
-            # Clean endpoint to prevent double /openai path issues
-            endpoint = Config.AZURE_OPENAI_ENDPOINT
-            if endpoint:
-                endpoint = endpoint.rstrip('/')
-                if endpoint.endswith('/openai'):
-                    endpoint = endpoint[:-7]
+class AzureOpenAIClient:
+    """Base Azure OpenAI client."""
+    def __init__(self):
+        # Clean endpoint to prevent double /openai path issues
+        endpoint = Config.AZURE_OPENAI_ENDPOINT
+        if endpoint:
+            endpoint = endpoint.rstrip('/')
+            if endpoint.endswith('/openai'):
+                endpoint = endpoint[:-7]
+        
+        client_args = {
+            "api_key": Config.AZURE_OPENAI_API_KEY,
+            "api_version": Config.AZURE_OPENAI_API_VERSION,
+            "azure_endpoint": endpoint
+        }
+        
+        if HTTPX_AVAILABLE:
+            # Create a custom http client that ignores SSL errors (sometimes needed in cloud envs)
+            http_client = httpx.Client(verify=False)
+            client_args["http_client"] = http_client
             
-            client_args = {
-                "api_key": Config.AZURE_OPENAI_API_KEY,
-                "api_version": Config.AZURE_OPENAI_API_VERSION,
-                "azure_endpoint": endpoint
-            }
-            
-            if HTTPX_AVAILABLE:
-                # Create a custom http client that ignores SSL errors (sometimes needed in cloud envs)
-                http_client = httpx.Client(verify=False)
-                client_args["http_client"] = http_client
-                
-            self.client = AzureOpenAI(**client_args)
-            self.token_tracker = TokenUsageTracker()
-            self.rate_limiter = RateLimiter(max_calls=60, time_window=60)
+        self.client = AzureOpenAI(**client_args)
+        self.token_tracker = TokenUsageTracker()
+        self.rate_limiter = RateLimiter(max_calls=60, time_window=60)
 
 
 class EmbeddingGenerator(AzureOpenAIClient):
