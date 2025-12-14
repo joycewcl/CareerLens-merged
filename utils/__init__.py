@@ -8,7 +8,7 @@ This package provides:
 - Validation utilities
 """
 
-from utils.config import (
+from utils.config_utils import (
     DEFAULT_EMBEDDING_BATCH_SIZE,
     DEFAULT_MAX_JOBS_TO_INDEX,
     EMBEDDING_BATCH_DELAY,
