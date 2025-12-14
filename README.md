@@ -78,6 +78,14 @@ An AI-powered career intelligence platform built with Streamlit, combining job m
    PINECONE_API_KEY = "your-key"
    RAPIDAPI_KEY = "your-key"
    ```
+   
+   **Important Notes:**
+   - `AZURE_OPENAI_ENDPOINT` should be your base Azure endpoint URL
+   - Example formats that work:
+     - `https://your-resource.openai.azure.com`
+     - `https://your-apim-gateway.azure-api.net` (for APIM)
+     - `https://your-apim-gateway.azure-api.net/openai` (also supported, `/openai` suffix is automatically removed)
+   - The application will automatically normalize the endpoint format
 
 3. **Run the app:**
    ```bash
