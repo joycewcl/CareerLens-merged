@@ -57,7 +57,7 @@ def _get_cosine_similarity():
     return _cosine_similarity
 
 
-from utils.config import (
+from utils.config_utils import (
     DEFAULT_EMBEDDING_BATCH_SIZE,
     EMBEDDING_BATCH_DELAY,
     RAPIDAPI_MAX_REQUESTS_PER_MINUTE,

@@ -773,7 +773,7 @@ def _get_utils_for_profile():
     """Lazy load utility functions to avoid circular imports"""
     from utils import get_text_generator, api_call_with_retry
     from utils.helpers import _websocket_keepalive
-    from utils.config import ENABLE_PROFILE_PASS2
+    from utils.config_utils import ENABLE_PROFILE_PASS2
     return {
         'get_text_generator': get_text_generator,
         'api_call_with_retry': api_call_with_retry,

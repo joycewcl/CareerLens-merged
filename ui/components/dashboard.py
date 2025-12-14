@@ -6,7 +6,7 @@ from core.salary_analyzer import SalaryAnalyzer, calculate_salary_band, filter_j
 from core.domain_filter import DomainFilter, filter_jobs_by_domains
 from core.semantic_search import SemanticJobSearch, fetch_jobs_with_cache, generate_and_store_resume_embedding
 from utils import get_embedding_generator, get_job_scraper, get_text_generator
-from utils.config import _determine_index_limit
+from utils.config_utils import _determine_index_limit
 
 
 def calculate_match_scores(jobs, user_skills_str):

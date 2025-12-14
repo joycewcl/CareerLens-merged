@@ -35,7 +35,7 @@ def job_recommendations_page(job_seeker_id: Optional[str] = None):
         from utils.helpers import ProgressTracker, _websocket_keepalive
         from core.semantic_search import SemanticJobSearch, fetch_jobs_with_cache
         from utils import get_embedding_generator, get_job_scraper
-        from utils.config import _determine_index_limit
+        from utils.config_utils import _determine_index_limit
         from ui.components.dashboard import (
             display_market_positioning_profile,
             calculate_match_scores
