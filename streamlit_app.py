@@ -781,6 +781,22 @@ try:
 except Exception:
     pass
 
+# Helper function for sidebar logo
+def _get_sidebar_logo_html():
+    """Get logo HTML for main app sidebar"""
+    import base64
+    logo_paths = ["CareerLens_Logo.png", "Logo.jpg"]
+    for logo_path in logo_paths:
+        if os.path.exists(logo_path):
+            try:
+                with open(logo_path, "rb") as f:
+                    data = f.read()
+                logo_base64 = base64.b64encode(data).decode()
+                return f'<img src="data:image/png;base64,{logo_base64}" style="display: block; margin: 0 auto 1rem auto; max-width: 180px; width: 100%; height: auto;">'
+            except Exception:
+                continue
+    return ''
+
 # APP UI
 def main_analyzer_page():
     """Main Page - CareerLens"""
@@ -2327,24 +2343,26 @@ def market_dashboard_page():
         """)
 
 # Sidebar navigation with new design
-st.sidebar.markdown("""
+logo_html_sidebar = _get_sidebar_logo_html()
+
+st.sidebar.markdown(f"""
 <style>
     /* CareerLens Logo and Branding */
-    .careerlens-logo {
+    .careerlens-logo {{
         font-family: 'Montserrat', sans-serif;
         font-size: 2rem;
         font-weight: 700;
         text-align: center;
         margin-bottom: 0.5rem;
         letter-spacing: -1px;
-    }
-    .careerlens-logo .brand-span {
+    }}
+    .careerlens-logo .brand-span {{
         color: var(--brand-core);
-    }
-    .careerlens-logo .lens-span {
+    }}
+    .careerlens-logo .lens-span {{
         color: var(--brand-glow);
-    }
-    .careerlens-tagline {
+    }}
+    .careerlens-tagline {{
         font-family: 'Montserrat', sans-serif;
         color: var(--text-secondary-light);
         text-transform: uppercase;
@@ -2352,10 +2370,10 @@ st.sidebar.markdown("""
         font-size: 0.7rem;
         text-align: center;
         margin-bottom: 2rem;
-    }
+    }}
     
     /* Navigation Section Headers */
-    .nav-section-header {
+    .nav-section-header {{
         font-family: 'Montserrat', sans-serif;
         font-weight: 700;
         font-size: 1.1rem;
@@ -2364,22 +2382,23 @@ st.sidebar.markdown("""
         margin-bottom: 0.5rem;
         padding-left: 0.5rem;
         border-left: 3px solid var(--brand-glow);
-    }
+    }}
     
     /* Navigation Items */
-    .nav-item {
+    .nav-item {{
         font-family: 'Inter', sans-serif;
         color: var(--text-secondary-light) !important;
         font-size: 0.9rem;
         padding-left: 1.5rem;
         margin: 0.3rem 0;
         cursor: pointer;
-    }
-    .nav-item:hover {
+    }}
+    .nav-item:hover {{
         color: var(--brand-glow) !important;
-    }
+    }}
 </style>
 
+{logo_html_sidebar}
 <div class="careerlens-logo">
     <span class="brand-span">Career</span><span class="lens-span">Lens</span>
 </div>

@@ -1,9 +1,26 @@
 """Sidebar UI component"""
 import streamlit as st
 import time
+import os
 from modules.resume_upload import extract_text_from_resume, extract_profile_from_resume
 from modules.semantic_search import generate_and_store_resume_embedding
 from .dashboard import display_skill_matching_matrix
+from modules.utils.helpers import get_img_as_base64
+
+
+def _get_sidebar_logo_html():
+    """Get logo HTML for sidebar"""
+    logo_paths = ["CareerLens_Logo.png", "Logo.jpg"]
+    for logo_path in logo_paths:
+        if os.path.exists(logo_path):
+            try:
+                logo_base64 = get_img_as_base64(logo_path)
+                return f'<img src="data:image/png;base64,{logo_base64}" class="sidebar-logo-image">'
+            except Exception as e:
+                # Failed to load logo file - continue to next
+                continue
+    # No logo found - return empty string
+    return ''
 
 
 def render_sidebar():
@@ -13,9 +30,11 @@ def render_sidebar():
     The sidebar is simplified to only handle profile upload and filter settings.
     """
     with st.sidebar:
-        st.markdown("""
+        logo_html = _get_sidebar_logo_html()
+        
+        st.markdown(f"""
         <style>
-            .sidebar-logo {
+            .sidebar-logo {{
                 color: white !important;
                 margin-bottom: 0.5rem;
                 display: flex;
@@ -27,14 +46,14 @@ def render_sidebar():
                 letter-spacing: -1px;
                 text-align: center;
                 justify-content: center;
-            }
-            .sidebar-logo .brand-span {
+            }}
+            .sidebar-logo .brand-span {{
                 color: var(--brand-core);
-            }
-            .sidebar-logo .lens-span {
+            }}
+            .sidebar-logo .lens-span {{
                 color: var(--brand-glow);
-            }
-            .sidebar-tagline {
+            }}
+            .sidebar-tagline {{
                 color: var(--text-secondary-light);
                 font-size: 0.7rem;
                 margin: 0;
@@ -42,9 +61,10 @@ def render_sidebar():
                 text-transform: uppercase;
                 letter-spacing: 2px;
                 text-align: center;
-            }
+            }}
         </style>
         <div style="margin-bottom: 2rem;">
+            {logo_html}
             <h2 class="sidebar-logo">
                 <span class="brand-span">Career</span><span class="lens-span">Lens</span>
             </h2>

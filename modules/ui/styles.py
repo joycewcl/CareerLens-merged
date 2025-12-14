@@ -190,6 +190,14 @@ def render_styles():
             transform: translateY(-2px);
         }}
         
+        .sidebar-logo-image {{
+            display: block;
+            margin: 0 auto 1rem auto;
+            max-width: 180px;
+            width: 100%;
+            height: auto;
+        }}
+        
         .hero-container {{
             background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
             padding: 40px;
@@ -221,11 +229,12 @@ def render_styles():
         }}
         .hero-bg-logo {{
             position: absolute;
-            right: -30px;
-            top: -30px;
-            width: 250px;
-            opacity: 0.15;
-            transform: rotate(-15deg);
+            right: 40px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 350px;
+            max-width: 40%;
+            opacity: 0.9;
             pointer-events: none;
             z-index: 5;
         }}
@@ -233,10 +242,11 @@ def render_styles():
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 150px;
-            height: 150px;
-            right: 20px;
-            top: 20px;
+            width: 200px;
+            height: 100px;
+            right: 40px;
+            top: 50%;
+            transform: translateY(-50%);
         }}
         .hero-logo-initials {{
             font-family: 'Montserrat', sans-serif;
