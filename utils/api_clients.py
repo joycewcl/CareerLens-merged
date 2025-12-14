@@ -74,14 +74,27 @@ from utils.helpers import (
 
 class APIMEmbeddingGenerator:
     """Azure OpenAI Embedding Generator"""
-    def __init__(self, api_key, endpoint):
+    def __init__(self, api_key, endpoint, deployment=None, api_version=None):
         self.api_key = api_key
         endpoint = endpoint.rstrip('/')
         if endpoint.endswith('/openai'):
             endpoint = endpoint[:-7]
         self.endpoint = endpoint
-        self.deployment = "text-embedding-3-small"
-        self.api_version = "2024-02-01"
+        
+        # Use config values if not explicitly provided
+        if deployment is None or api_version is None:
+            try:
+                from config import Config
+                Config.setup()
+                if deployment is None:
+                    deployment = Config.AZURE_OPENAI_EMBEDDING_DEPLOYMENT
+                if api_version is None:
+                    api_version = Config.AZURE_OPENAI_API_VERSION
+            except Exception:
+                pass
+        
+        self.deployment = deployment or "text-embedding-3-small"
+        self.api_version = api_version or "2024-02-01"
         self.url = f"{self.endpoint}/openai/deployments/{self.deployment}/embeddings?api-version={self.api_version}"
         self.headers = {"api-key": self.api_key, "Content-Type": "application/json"}
         self._encoding = None  # Lazy load
@@ -201,14 +214,27 @@ class APIMEmbeddingGenerator:
 
 class AzureOpenAITextGenerator:
     """Azure OpenAI Text Generator for resume generation and analysis"""
-    def __init__(self, api_key, endpoint, token_tracker=None):
+    def __init__(self, api_key, endpoint, token_tracker=None, deployment=None, api_version=None):
         self.api_key = api_key
         endpoint = endpoint.rstrip('/')
         if endpoint.endswith('/openai'):
             endpoint = endpoint[:-7]
         self.endpoint = endpoint
-        self.deployment = "gpt-4o-mini"
-        self.api_version = "2024-02-01"
+        
+        # Use config values if not explicitly provided
+        if deployment is None or api_version is None:
+            try:
+                from config import Config
+                Config.setup()
+                if deployment is None:
+                    deployment = Config.AZURE_OPENAI_DEPLOYMENT
+                if api_version is None:
+                    api_version = Config.AZURE_OPENAI_API_VERSION
+            except Exception:
+                pass
+        
+        self.deployment = deployment or "gpt-4o-mini"
+        self.api_version = api_version or "2024-02-01"
         self.url = f"{self.endpoint}/openai/deployments/{self.deployment}/chat/completions?api-version={self.api_version}"
         self.headers = {"api-key": self.api_key, "Content-Type": "application/json"}
         self.token_tracker = token_tracker

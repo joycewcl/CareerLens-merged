@@ -94,8 +94,6 @@ def check_app_files() -> bool:
     
     required_files = [
         "streamlit_app.py",
-        "backend.py",
-        "database.py",
         "config.py",
         "requirements.txt",
     ]
