@@ -786,6 +786,17 @@ def load_backend():
 backend = load_backend()
 
 
+# Utility function for logo loading
+def get_logo_base64():
+    """Get logo as base64 for embedding in HTML"""
+    try:
+        with open("Logo.jpg", "rb") as f:
+            return base64.b64encode(f.read()).decode()
+    except (FileNotFoundError, IOError, OSError):
+        # Logo file not found or unreadable
+        return None
+
+
 # Initialize database - only once using caching (cleaner than session state)
 @st.cache_resource
 def initialize_databases():
@@ -885,15 +896,11 @@ except Exception:
 # APP UI
 def main_analyzer_page():
     """Main Page - CareerLens"""
-    # Load logo
+    # Load logo using shared utility function
+    logo_base64 = get_logo_base64()
     logo_img = ""
-    try:
-        with open("Logo.jpg", "rb") as f:
-            logo_base64 = base64.b64encode(f.read()).decode()
-            logo_img = f'<img src="data:image/jpeg;base64,{logo_base64}" style="width: 100%; max-width: 400px; margin: 0 auto 2rem auto; display: block;">'
-    except (FileNotFoundError, IOError, OSError) as e:
-        # Logo file not found or unreadable - continue without logo
-        pass
+    if logo_base64:
+        logo_img = f'<img src="data:image/jpeg;base64,{logo_base64}" style="width: 100%; max-width: 400px; margin: 0 auto 2rem auto; display: block;">'
     
     st.markdown(f"""
     <style>
@@ -2446,15 +2453,6 @@ def market_dashboard_page():
 
 # Sidebar navigation with new design
 # Load and embed the logo
-def get_logo_base64():
-    """Get logo as base64 for embedding in HTML"""
-    try:
-        with open("Logo.jpg", "rb") as f:
-            return base64.b64encode(f.read()).decode()
-    except (FileNotFoundError, IOError, OSError):
-        # Logo file not found or unreadable
-        return None
-
 logo_base64 = get_logo_base64()
 logo_html = ""
 if logo_base64:
