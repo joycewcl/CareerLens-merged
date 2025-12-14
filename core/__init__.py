@@ -5,7 +5,7 @@ This package contains centralized, reusable components that are shared
 across the application.
 """
 
-from .rate_limiting import TokenUsageTracker, RateLimiter
+from .job_processor import JobSeekerBackend, JobMatcherBackend
 from .job_matcher import (
     JobMatcher,
     calculate_match_scores,
@@ -19,38 +19,41 @@ from .resume_parser import (
     extract_structured_profile,
     generate_tailored_resume
 )
+from .rate_limiting import TokenUsageTracker, RateLimiter
 from .interview import (
     initialize_interview_session,
     generate_interview_question,
     evaluate_answer,
     generate_final_summary
-)
-from .job_processor import (
-    JobSeekerBackend,
-    JobMatcherBackend
+    # NOTE: ai_interview_page is UI, not business logic
+    # UI is in modules/ui/pages/ai_interview_page.py
 )
 
 __all__ = [
-    # Rate limiting
-    'TokenUsageTracker',
-    'RateLimiter',
-    # Job matching
+    # Job Processing
+    'JobSeekerBackend',
+    'JobMatcherBackend',
+    
+    # Job Matching
     'JobMatcher',
     'calculate_match_scores',
     'analyze_match_simple',
     'calculate_job_match_score',
-    # Resume parsing
+    
+    # Resume Processing
     'ResumeParser',
     'GPT4JobRoleDetector',
     'extract_relevant_resume_sections',
     'extract_structured_profile',
     'generate_tailored_resume',
-    # Interview (business logic only - UI is in modules/ui/pages/ai_interview_page.py)
+    
+    # Rate Limiting
+    'TokenUsageTracker',
+    'RateLimiter',
+    
+    # Interview Logic (business logic only)
     'initialize_interview_session',
     'generate_interview_question',
     'evaluate_answer',
     'generate_final_summary',
-    # Job processing orchestrators
-    'JobSeekerBackend',
-    'JobMatcherBackend',
 ]

@@ -2,7 +2,7 @@
 AI Interview business logic.
 
 This module provides core interview functionality:
-- Interview session initialization (session state management)
+- Interview session initialization (returns state dict, no Streamlit dependency)
 - Interview question generation (Azure OpenAI)
 - Answer evaluation (Azure OpenAI)
 - Final interview summary generation (Azure OpenAI)
@@ -10,29 +10,30 @@ This module provides core interview functionality:
 Note: UI rendering is handled in modules/ui/pages/ai_interview_page.py
 """
 
-import streamlit as st
 from typing import Dict
 
 
-def initialize_interview_session(job_data: tuple) -> None:
-    """Initialize interview session in Streamlit state.
+def initialize_interview_session(job_data: tuple) -> Dict:
+    """Create initial interview session state.
     
     Args:
         job_data: Tuple of job fields from database query
+        
+    Returns:
+        Dictionary containing initial interview state
     """
-    if 'interview' not in st.session_state:
-        st.session_state.interview = {
-            'job_id': job_data[0],
-            'job_title': job_data[1],
-            'company': job_data[5],
-            'current_question': 0,
-            'total_questions': 2,
-            'questions': [],
-            'answers': [],
-            'scores': [],
-            'completed': False,
-            'summary': None
-        }
+    return {
+        'job_id': job_data[0],
+        'job_title': job_data[1],
+        'company': job_data[5],
+        'current_question': 0,
+        'total_questions': 2,
+        'questions': [],
+        'answers': [],
+        'scores': [],
+        'completed': False,
+        'summary': None
+    }
 
 
 def generate_interview_question(job_data: tuple, seeker_profile: tuple, 

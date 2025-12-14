@@ -58,7 +58,8 @@ def ai_interview_page():
             st.write(f"**Skill Requirements:** {selected_job[4][:100]}...")
 
     # Initialize interview session
-    initialize_interview_session(selected_job)
+    if 'interview' not in st.session_state:
+        st.session_state.interview = initialize_interview_session(selected_job)
     interview = st.session_state.interview
 
     # Start/continue interview
