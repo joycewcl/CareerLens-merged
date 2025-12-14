@@ -2,7 +2,8 @@
 import streamlit as st
 import pandas as pd
 import gc
-from modules.analysis import calculate_salary_band, filter_jobs_by_domains, filter_jobs_by_salary
+from backend import calculate_salary_band
+from modules.analysis import filter_jobs_by_domains, filter_jobs_by_salary
 from modules.semantic_search import SemanticJobSearch, fetch_jobs_with_cache, generate_and_store_resume_embedding
 from modules.utils import get_embedding_generator, get_job_scraper, get_text_generator
 from modules.utils.config import _determine_index_limit
