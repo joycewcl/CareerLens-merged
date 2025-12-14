@@ -395,6 +395,7 @@ def check_api_availability(show_messages=True):
     Returns:
         Dictionary with availability status for each API service
     """
+    # Import here to avoid circular import (config.py may import from utils)
     from config import Config
     
     # Initialize config if not already done
@@ -433,14 +434,25 @@ def check_api_availability(show_messages=True):
     if show_messages and missing_configs:
         with st.expander("⚠️ Some API services are not configured", expanded=False):
             st.warning(f"Missing configuration: {', '.join(missing_configs)}")
-            st.info("""
+            
+            # Build configuration template based on what's actually missing
+            config_lines = []
+            if 'AZURE_OPENAI_API_KEY' in missing_configs:
+                config_lines.append('AZURE_OPENAI_API_KEY = "your-azure-openai-key"')
+            if 'AZURE_OPENAI_ENDPOINT' in missing_configs:
+                config_lines.append('AZURE_OPENAI_ENDPOINT = "https://YOUR-RESOURCE.openai.azure.com"')
+            if 'PINECONE_API_KEY' in missing_configs:
+                config_lines.append('PINECONE_API_KEY = "your-pinecone-key"')
+            if 'RAPIDAPI_KEY' in missing_configs:
+                config_lines.append('RAPIDAPI_KEY = "your-rapidapi-key"')
+            
+            config_template = '\n'.join(config_lines)
+            
+            st.info(f"""
 **To enable all features, configure the following in `.streamlit/secrets.toml`:**
 
 ```toml
-AZURE_OPENAI_API_KEY = "your-azure-openai-key"
-AZURE_OPENAI_ENDPOINT = "https://YOUR-RESOURCE.openai.azure.com"
-PINECONE_API_KEY = "your-pinecone-key"
-RAPIDAPI_KEY = "your-rapidapi-key"
+{config_template}
 ```
 
 **Features affected:**

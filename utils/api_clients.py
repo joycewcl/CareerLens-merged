@@ -651,8 +651,9 @@ Return ONLY the recruiter note text, no labels or formatting."""
                 elif response.status_code in [401, 403]:
                     st.warning(f"⚠️ API authentication issue - using fallback recruiter note.")
         except Exception as e:
-            # Silently fall back to default note
-            pass
+            # Log exception for debugging but don't disrupt user experience
+            import logging
+            logging.warning(f"Recruiter note generation failed: {e}")
         
         if semantic_score >= 0.7:
             return f"This role heavily emphasizes recent experience in {job.get('skills', ['relevant skills'])[0] if job.get('skills') else 'relevant skills'}, which is a strong point in your profile."

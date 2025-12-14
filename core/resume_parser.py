@@ -860,7 +860,14 @@ Important:
             if response_pass1:
                 if response_pass1.status_code == 404:
                     st.error("❌ API Error 404: Endpoint not found. Please check your Azure OpenAI endpoint URL.")
-                    st.info(f"💡 Current endpoint: {text_gen.url.split('/deployments')[0] if text_gen else 'Not configured'}")
+                    # Safely extract endpoint information
+                    endpoint_info = "Not configured"
+                    if text_gen and hasattr(text_gen, 'url') and text_gen.url:
+                        try:
+                            endpoint_info = text_gen.url.split('/deployments')[0]
+                        except (AttributeError, IndexError):
+                            endpoint_info = str(text_gen.url)
+                    st.info(f"💡 Current endpoint: {endpoint_info}")
                     st.info("💡 Tip: Update your AZURE_OPENAI_ENDPOINT in .streamlit/secrets.toml")
                 elif response_pass1.status_code == 401:
                     st.error("❌ API Error 401: Unauthorized. Please check your Azure OpenAI API key.")
