@@ -18,6 +18,11 @@ import re
 import hashlib
 import streamlit as st
 import requests
+from typing import TYPE_CHECKING
+
+# Type checking imports for Pylance
+if TYPE_CHECKING:
+    import tiktoken
 
 # Import canonical implementations from core
 from core.rate_limiting import TokenUsageTracker, RateLimiter

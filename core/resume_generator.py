@@ -12,7 +12,15 @@ Note: Heavy dependencies (docx, reportlab) are lazy-loaded to improve startup ti
 
 import streamlit as st
 from io import BytesIO
-from typing import Dict, Any
+from typing import Dict, Any, TYPE_CHECKING
+
+# Type checking imports for Pylance
+if TYPE_CHECKING:
+    from docx import Document
+    from docx.shared import Inches, Pt, RGBColor
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.oxml.ns import qn
+    from docx.oxml import OxmlElement
 
 # Lazy imports for heavy modules - only load when needed
 _docx_loaded = False

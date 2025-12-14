@@ -6,7 +6,11 @@ skill distributions, and comparative charts.
 """
 
 import streamlit as st
-from typing import List, Dict
+from typing import List, Dict, TYPE_CHECKING
+
+# Type checking imports for Pylance
+if TYPE_CHECKING:
+    import matplotlib.pyplot
 
 # Lazy imports for heavy visualization libraries
 _pd = None

@@ -7,7 +7,12 @@ Pinecone vector database and SentenceTransformer embeddings.
 
 import time
 import streamlit as st
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, TYPE_CHECKING
+
+# Type checking imports for Pylance
+if TYPE_CHECKING:
+    from sentence_transformers import SentenceTransformer
+    from pinecone import Pinecone, ServerlessSpec
 
 # Lazy imports for heavy ML/embedding libraries
 _SentenceTransformer = None

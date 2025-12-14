@@ -18,7 +18,11 @@ import hashlib
 import time
 import streamlit as st
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple, TYPE_CHECKING
+
+# Type checking imports for Pylance
+if TYPE_CHECKING:
+    from sklearn.metrics.pairwise import cosine_similarity
 
 # Lazy imports for heavy modules - only load when needed
 _np = None
