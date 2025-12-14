@@ -16,7 +16,7 @@ def display_job_card(result, index):
         <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
             <div style="flex-grow: 1;">
                 <h3 style="margin: 0; color: var(--primary-accent);">#{index} {job['title']}</h3>
-                <p style="margin: 0.5rem 0; color: var(--text-secondary); font-size: 0.95rem;">
+                <p style="margin: 0.5rem 0; color: var(--text-muted); font-size: 0.95rem;">
                     🏢 <strong>{job['company']}</strong> {stars} • 📍 {job['location']} {remote_badge}
                 </p>
             </div>
@@ -24,7 +24,7 @@ def display_job_card(result, index):
                 {score:.1%} Match
             </div>
         </div>
-        <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem; color: var(--text-secondary);">
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem; color: var(--text-muted);">
             <span>⏰ {job['job_type']}</span>
             <span>💰 {job['salary']}</span>
             <span>📅 {job['posted_date']}</span>

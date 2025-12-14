@@ -96,7 +96,8 @@ def render_styles():
 
             /* Text */
             --text-primary-light: #FFFFFF;
-            --text-secondary: #94A3B8; /* Muted grey-blue for subtitles */
+            --text-secondary-light: #CBD5E1; /* Light grey for dark backgrounds - better contrast */
+            --text-muted: #94A3B8;   /* Muted grey for less important text */
 
             /* Brand Colors */
             --brand-glow: #00D2FF;   /* The bright cyan highlight */
@@ -161,8 +162,10 @@ def render_styles():
             background-color: var(--bg-primary);
             padding: 2rem 1rem;
         }}
-        [data-testid="stSidebar"] * {{
-            color: var(--text-secondary) !important;
+        [data-testid="stSidebar"] .stMarkdown p,
+        [data-testid="stSidebar"] .stMarkdown span,
+        [data-testid="stSidebar"] label {{
+            color: var(--text-secondary-light);
             font-family: 'Inter', sans-serif;
         }}
         [data-testid="stSidebar"] h1,
@@ -212,7 +215,7 @@ def render_styles():
             color: white;
         }}
         .hero-subtitle {{
-            color: var(--text-secondary);
+            color: var(--text-secondary-light);
             font-size: 16px;
             margin-top: 10px;
         }}
