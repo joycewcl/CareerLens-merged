@@ -12,7 +12,8 @@ def display_match_score_feedback(match_score, missing_keywords, job_title):
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        score_percent = match_score * 100
+        # Handle both 0-1 scale and 0-100 scale scores
+        score_percent = match_score if match_score > 1 else match_score * 100
         
         if score_percent >= 80:
             score_color = "🟢"

@@ -1483,9 +1483,11 @@ def job_recommendations_page(job_seeker_id=None):
             st.info("📊 **Ranking Algorithm:** 60% Semantic Similarity + 40% Skill Match")
 
             # Display top matches
-            for i, job in enumerate(matched_jobs[:num_jobs_to_show], start=1):
-
-                combined = job.get("combined_score", 0)
+            for i, result in enumerate(matched_jobs[:num_jobs_to_show], start=1):
+                # Handle both nested 'job' structure (from SemanticJobSearch) and flat structure
+                job = result.get('job', result)
+                
+                combined = result.get("combined_score", result.get("combined_match_score", 0))
 
                 if combined >= 80:
                     match_emoji, match_label, match_color = "🟢", "Excellent Match", "#D4EDDA"
@@ -1501,16 +1503,20 @@ def job_recommendations_page(job_seeker_id=None):
 
                 with st.expander(expander_title, expanded=i <= 2):
 
-                    # Scores
+                    # Scores - use result for scores, job for job data
+                    semantic_score = result.get('semantic_score', result.get('similarity_score', 0))
+                    skill_match = result.get('skill_match_percentage', result.get('skill_match_score', 0))
+                    matched_count = result.get('matched_skills_count', 0)
+                    
                     col1, col2, col3, col4 = st.columns(4)
                     with col1:
                         st.metric("🎯 Combined Score", f"{combined:.1f}%")
                     with col2:
-                        st.metric("🧠 Semantic Match", f"{job.get('semantic_score', 0):.1f}%")
+                        st.metric("🧠 Semantic Match", f"{semantic_score:.1f}%")
                     with col3:
-                        st.metric("✅ Skill Match", f"{job.get('skill_match_percentage', 0):.1f}%")
+                        st.metric("✅ Skill Match", f"{skill_match:.1f}%")
                     with col4:
-                        st.metric("🔢 Skills Matched", job.get("matched_skills_count", 0))
+                        st.metric("🔢 Skills Matched", matched_count)
 
                     # Job details
                     st.markdown("##### 📋 Job Details")
@@ -1524,8 +1530,8 @@ def job_recommendations_page(job_seeker_id=None):
                         st.write(f"**📅 Posted:** {job.get('posted_date', 'Unknown')}")
                         st.write(f"**💼 Role:** {job.get('title', 'Unknown')}")
 
-                    # Matched skills (candidate has)
-                    matched_skills = job.get("matched_skills", [])
+                    # Matched skills (candidate has) - from result, not job
+                    matched_skills = result.get("matched_skills", job.get("matched_skills", []))
 
                     # Required skills from job (assumes this field exists as a list)
                     required_skills = job.get("required_skills", [])
@@ -2279,7 +2285,10 @@ def market_dashboard_page():
         
         # Main dashboard area - only show after analysis
         if not st.session_state.get('dashboard_ready', False) or not st.session_state.matched_jobs:
-            st.info("👆 Upload your CV in the sidebar and click 'Analyze Profile & Find Matches' to see your market positioning and ranked opportunities.")
+            st.info("👆 Upload your CV in the sidebar to get started. Once uploaded, use the 'Refine Results' section below to search for jobs and see your market positioning.")
+            
+            # Show the Refine Results section even before search to allow user to initiate search
+            display_refine_results_section([], st.session_state.user_profile)
             return
         
         # Display Market Positioning Profile (Top Section)

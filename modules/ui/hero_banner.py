@@ -10,8 +10,10 @@ def render_hero_banner(user_profile, matched_jobs=None):
         user_name = 'Professional'
     
     if matched_jobs and len(matched_jobs) > 0:
-        avg_score = sum(r.get('combined_match_score', 0) for r in matched_jobs) / len(matched_jobs)
-        subtitle = f"Your AI-powered career analysis is ready. We found {len(matched_jobs)} matching opportunities with {int(avg_score * 100)}% average fit."
+        avg_score = sum(r.get('combined_score', r.get('combined_match_score', 0)) for r in matched_jobs) / len(matched_jobs)
+        # Handle both 0-1 scale (old) and 0-100 scale (new) scores
+        display_score = int(avg_score) if avg_score > 1 else int(avg_score * 100)
+        subtitle = f"Your AI-powered career analysis is ready. We found {len(matched_jobs)} matching opportunities with {display_score}% average fit."
     elif user_profile and user_profile.get('skills'):
         subtitle = "Your profile is loaded. Unlock AI-powered insights to discover your market positioning and best-fit opportunities."
     else:
