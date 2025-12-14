@@ -246,6 +246,7 @@ class GPT4JobRoleDetector:
         """Lazy-load AzureOpenAI client only when needed."""
         if self._client is None:
             from openai import AzureOpenAI
+            import httpx
             
             # Clean endpoint
             endpoint = self._config.AZURE_ENDPOINT
@@ -254,10 +255,14 @@ class GPT4JobRoleDetector:
                 if endpoint.endswith('/openai'):
                     endpoint = endpoint[:-7]
             
+            # Create a custom http client that ignores SSL errors
+            http_client = httpx.Client(verify=False)
+
             self._client = AzureOpenAI(
                 azure_endpoint=endpoint,
                 api_key=self._config.AZURE_API_KEY,
-                api_version=self._config.AZURE_API_VERSION
+                api_version=self._config.AZURE_API_VERSION,
+                http_client=http_client
             )
         return self._client
     
@@ -318,6 +323,7 @@ For job search, provide SIMPLE terms that would work on LinkedIn/Indeed (not com
 
 Be thorough and creative!"""
 
+        import openai
         try:
             # Check if API keys are configured before attempting API call
             is_configured, error_msg = self._config.check_azure_credentials()
@@ -362,6 +368,22 @@ Be thorough and creative!"""
                 ai_analysis['_analysis_incomplete'] = True
             
             return ai_analysis
+            
+        except openai.APIConnectionError as e:
+            error_msg = f"Connection error: {e}. Please check your AZURE_OPENAI_ENDPOINT. It should be 'https://YOUR_RESOURCE.openai.azure.com/'"
+            print(f"❌ GPT-4 Connection Error: {error_msg}")
+            fallback = self._fallback_analysis()
+            fallback['_error'] = error_msg
+            fallback['_analysis_failed'] = True
+            return fallback
+            
+        except openai.AuthenticationError as e:
+            error_msg = f"Authentication error: {e}. Please check your AZURE_OPENAI_API_KEY."
+            print(f"❌ GPT-4 Auth Error: {error_msg}")
+            fallback = self._fallback_analysis()
+            fallback['_error'] = error_msg
+            fallback['_analysis_failed'] = True
+            return fallback
             
         except Exception as e:
             error_msg = str(e)
@@ -509,6 +531,7 @@ def extract_structured_profile(resume_text: str, enable_verification: bool = Fal
         
         from openai import AzureOpenAI
         import openai
+        import httpx
         
         # Clean endpoint to prevent double /openai path issues
         endpoint = config.AZURE_ENDPOINT
@@ -517,10 +540,14 @@ def extract_structured_profile(resume_text: str, enable_verification: bool = Fal
             if endpoint.endswith('/openai'):
                 endpoint = endpoint[:-7]
         
+        # Create a custom http client that ignores SSL errors
+        http_client = httpx.Client(verify=False)
+
         client = AzureOpenAI(
             azure_endpoint=endpoint,
             api_key=config.AZURE_API_KEY,
-            api_version=config.AZURE_API_VERSION
+            api_version=config.AZURE_API_VERSION,
+            http_client=http_client
         )
         
         # FIRST PASS: Initial extraction
@@ -571,6 +598,14 @@ Important:
                  pass
             
             print("❌ Structured profile extraction failed (404). Returning None.")
+            return None
+        
+        except openai.APIConnectionError as e:
+            print(f"❌ Connection error: {e}. Please check your AZURE_OPENAI_ENDPOINT. It should be 'https://YOUR_RESOURCE.openai.azure.com/'")
+            return None
+            
+        except openai.AuthenticationError as e:
+            print(f"❌ Authentication error: {e}. Please check your AZURE_OPENAI_API_KEY.")
             return None
 
         
@@ -656,6 +691,7 @@ def generate_tailored_resume(user_profile: Dict, job_posting: Dict,
         
         from openai import AzureOpenAI
         import openai
+        import httpx
         
         # Clean endpoint
         endpoint = config.AZURE_ENDPOINT
@@ -664,10 +700,14 @@ def generate_tailored_resume(user_profile: Dict, job_posting: Dict,
             if endpoint.endswith('/openai'):
                 endpoint = endpoint[:-7]
         
+        # Create a custom http client that ignores SSL errors
+        http_client = httpx.Client(verify=False)
+
         client = AzureOpenAI(
             azure_endpoint=endpoint,
             api_key=config.AZURE_API_KEY,
-            api_version=config.AZURE_API_VERSION
+            api_version=config.AZURE_API_VERSION,
+            http_client=http_client
         )
         
         system_instructions = """You are an expert resume writer with expertise in ATS optimization and career coaching.
@@ -752,6 +792,14 @@ Return ONLY the JSON object."""
             )
         except openai.NotFoundError:
             print(f"⚠️ 404 Resource Not Found in generate_tailored_resume. Endpoint: {endpoint}")
+            return None
+            
+        except openai.APIConnectionError as e:
+            print(f"❌ Connection error: {e}. Please check your AZURE_OPENAI_ENDPOINT.")
+            return None
+            
+        except openai.AuthenticationError as e:
+            print(f"❌ Authentication error: {e}. Please check your AZURE_OPENAI_API_KEY.")
             return None
         
         content = response.choices[0].message.content

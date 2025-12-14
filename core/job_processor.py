@@ -195,6 +195,7 @@ class JobSeekerBackend:
         """
         from openai import AzureOpenAI
         import json
+        import httpx
         
         # Clean endpoint to prevent double /openai path issues
         endpoint = Config.AZURE_OPENAI_ENDPOINT
@@ -203,11 +204,15 @@ class JobSeekerBackend:
             if endpoint.endswith('/openai'):
                 endpoint = endpoint[:-7]
         
+        # Create a custom http client that ignores SSL errors
+        http_client = httpx.Client(verify=False)
+
         # Use Azure OpenAI client
         client = AzureOpenAI(
             azure_endpoint=endpoint,
             api_key=Config.AZURE_OPENAI_API_KEY,
-            api_version=Config.AZURE_OPENAI_API_VERSION
+            api_version=Config.AZURE_OPENAI_API_VERSION,
+            http_client=http_client
         )
         
         prompt = f"""
