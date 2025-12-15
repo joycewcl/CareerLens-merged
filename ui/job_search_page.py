@@ -97,13 +97,13 @@ def job_recommendations_page(job_seeker_id: Optional[str] = None):
     st.title("💼 Personalized Job Recommendations")
 
     # Get job seeker data - add error handling
-    job_seeker_data = None
+    job_seeker_data = dict()
     try:
         if job_seeker_id:
             job_seeker_data = db.get_profile(job_seeker_id)
         else:
             # If no ID provided, try to get latest record
-            job_seeker_data = db.get_latest_job_seeker_id()
+            job_seeker_data = db.get_latest_profile()
             
     except Exception as e:
         st.error(f"Error getting job seeker data: {e}")
@@ -485,7 +485,7 @@ def job_recommendations_page(job_seeker_id: Optional[str] = None):
         create_enhanced_visualizations(matched_jobs, job_seeker_data)
         
         # Create radar chart comparison for top jobs
-        create_job_comparison_radar(matched_jobs)
+        # create_job_comparison_radar(matched_jobs)
         
         # Additional detailed analysis
         st.markdown("---")
@@ -627,6 +627,7 @@ def _display_job_matches(matched_jobs: List[Dict], num_jobs_to_show: int, job_se
         from services.azure_openai import generate_docx_from_json, generate_pdf_from_json, format_resume_as_text
         from core.resume_parser import verify_profile_data_pass2
         from utils.helpers import ProgressTracker, _websocket_keepalive
+        from ui.visualizations import create_enhanced_visualizations, create_job_comparison_radar
         RESUME_AVAILABLE = True
     except ImportError:
         RESUME_AVAILABLE = False
@@ -786,6 +787,9 @@ def _display_job_matches(matched_jobs: List[Dict], num_jobs_to_show: int, job_se
                 if st.button("✨ Tailor Resume", key=f"tailor_{job.get('id', i)}", use_container_width=True):
                     st.session_state.selected_job_for_resume = job
                     st.session_state.show_resume_generator = True
+
+            # Create radar chart for this job, added 15/12/2025 by Michael
+            create_job_comparison_radar([result])
         
             # Show resume generator if selected
             if st.session_state.get('show_resume_generator') and st.session_state.get('selected_job_for_resume', {}).get('id') == job.get('id'):
@@ -805,7 +809,7 @@ def _display_job_matches(matched_jobs: List[Dict], num_jobs_to_show: int, job_se
                         st.rerun()
 
 
-def _display_resume_generator_ui(job: Dict, user_profile: Dict, resume_text: str = None):
+def _display_resume_generator_ui(job: Dict, user_profile: Dict, resume_text: str = ""):
     """Display Resume Tailoring UI
     
     Includes Lazy Pass 2: Profile verification runs here before resume generation,

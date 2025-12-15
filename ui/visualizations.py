@@ -6,7 +6,8 @@ skill distributions, and comparative charts.
 """
 
 import streamlit as st
-from typing import List, Dict
+from collections import Counter
+import datetime
 
 # Lazy imports for heavy visualization libraries
 _pd = None
@@ -51,213 +52,180 @@ def _get_numpy():
     return _np
 
 
-def create_enhanced_visualizations(matched_jobs: List[Dict], job_seeker_data: Dict = None):
-    """Create enhanced visualizations for job matching analysis"""
-    if not matched_jobs:
-        st.warning("No visualization data available - no jobs matched")
+
+def create_enhanced_visualizations(matched_jobs):
+    if not matched_jobs or len(matched_jobs) == 0:
+        st.info("No matched jobs available for visualization.")
         return
-
-    # Lazy load heavy libraries only when visualizations are created
-    np = _get_numpy()
-    plt = _get_matplotlib()
-    pd = _get_pandas()
-
-    st.markdown("---")
-    st.subheader("📊 Advanced Match Analysis")
+    go = _get_plotly()
     
-    try:
-        # 1. Score comparison chart
-        st.markdown("### 🎯 Match Score Breakdown")
-        
-        # Prepare data for top 5 jobs
-        top_jobs = matched_jobs[:5]
-        jobs_display = [f"Job {i+1}" for i in range(len(top_jobs))]
-        combined_scores = [j.get('combined_score', 0) for j in top_jobs]
-        semantic_scores = [j.get('semantic_score', 0) for j in top_jobs]
-        skill_scores = [j.get('skill_match_percentage', 0) for j in top_jobs]
+    job_titles, similarity_scores, skill_scores, exp_scores = [], [], [], []
+    avg_salaries, years_experience = [], []
+    num_applicants, salary_labels = [], []
+    company_ratings, rating_counts = [], []
+    company_sizes, remote_flags = [], []
+    urgent_flags, high_volume_flags = [], []
+    job_types, benefit_counts, publishing_dates = [], [], []
 
-        # Create detailed score comparison
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+    for job in matched_jobs:
+        # Title/Company
+        label = f"{job.get('title', 'N/A')} @ {job.get('companyName', '')}"
+        job_titles.append(label)
 
-        # Scores by job - improved styling
-        x = np.arange(len(jobs_display))
-        width = 0.25
+        # Match scores (from your system)
+        similarity_scores.append(job.get("similarity_score", 0))
+        skill_scores.append(job.get("skill_match_score", 0))
+        exp_scores.append(job.get("experience_match_score", 0))
 
-        bars1 = ax1.bar(x - width, combined_scores, width, label='Combined', color='#7e22ce', alpha=0.8)
-        bars2 = ax1.bar(x, semantic_scores, width, label='Semantic', color='#3b82f6', alpha=0.8)
-        bars3 = ax1.bar(x + width, skill_scores, width, label='Skills', color='#10b981', alpha=0.8)
+        # Salary (same as before)
+        sal_block = job.get("salary", {})
+        sal_min, sal_max = sal_block.get("salaryMin"), sal_block.get("salaryMax")
+        salary = (float(sal_min) + float(sal_max)) / 2 if sal_min is not None and sal_max is not None \
+                 else float(sal_min) if sal_min is not None else float(sal_max) if sal_max is not None else None
+        avg_salaries.append(salary)
+        salary_labels.append(sal_block.get("salaryText", "N/A") if salary else "N/A")
+        years_experience.append(None)  # Not present in API
 
-        ax1.set_xlabel('Jobs', fontsize=12, fontweight='bold')
-        ax1.set_ylabel('Score (%)', fontsize=12, fontweight='bold')
-        ax1.set_title('Match Scores by Job Position', fontsize=14, fontweight='bold', pad=20)
-        ax1.set_xticks(x)
-        ax1.set_xticklabels(jobs_display, fontsize=10)
-        ax1.legend(fontsize=10)
-        ax1.grid(True, alpha=0.3)
-        ax1.set_ylim(0, 100)
+        # Applicants
+        num_applicants.append(job.get("numOfCandidates"))
 
-        # Add value labels on bars
-        for bars in [bars1, bars2, bars3]:
-            for bar in bars:
-                height = bar.get_height()
-                ax1.text(bar.get_x() + bar.get_width()/2., height + 1,
-                        f'{height:.1f}%', ha='center', va='bottom', fontsize=9, fontweight='bold')
+        # Company rating
+        rating = job.get("rating", {}).get("rating")
+        company_ratings.append(rating)
+        rating_counts.append(job.get("rating", {}).get("count"))
 
-        # 2. Enhanced skill distribution
-        all_skills = []
-        skill_categories = {}
-        
-        for job in matched_jobs:
-            skills = job.get('matched_skills', [])
-            all_skills.extend(skills)
-            
-            # Categorize skills
-            for skill in skills:
-                skill_lower = skill.lower()
-                if any(keyword in skill_lower for keyword in ['python', 'java', 'c++', 'javascript', 'sql', 'r']):
-                    category = 'Programming'
-                elif any(keyword in skill_lower for keyword in ['machine learning', 'ai', 'deep learning', 'nlp', 'computer vision']):
-                    category = 'AI/ML'
-                elif any(keyword in skill_lower for keyword in ['tableau', 'power bi', 'excel', 'analysis', 'analytics']):
-                    category = 'Analytics'
-                elif any(keyword in skill_lower for keyword in ['project', 'management', 'leadership', 'team']):
-                    category = 'Management'
-                elif any(keyword in skill_lower for keyword in ['communication', 'presentation', 'writing', 'english']):
-                    category = 'Communication'
-                else:
-                    category = 'Other'
-                
-                skill_categories[category] = skill_categories.get(category, 0) + 1
+        # Company size/employee group
+        company_sizes.append(job.get('companyNumEmployees', 'N/A'))
 
-        # Skill frequency chart
-        skill_counts = pd.Series(all_skills).value_counts().head(10)
-        
-        colors = plt.cm.viridis(np.linspace(0, 1, len(skill_counts)))
-        bars = ax2.barh(range(len(skill_counts)), skill_counts.values, color=colors, alpha=0.8)
-        
-        ax2.set_yticks(range(len(skill_counts)))
-        ax2.set_yticklabels(skill_counts.index, fontsize=10)
-        ax2.set_xlabel('Frequency Across All Matched Jobs', fontsize=12, fontweight='bold')
-        ax2.set_title('Most Common Matched Skills', fontsize=14, fontweight='bold', pad=20)
-        ax2.grid(True, alpha=0.3)
-        
-        # Add value labels
-        for i, bar in enumerate(bars):
-            width = bar.get_width()
-            ax2.text(width + 0.1, bar.get_y() + bar.get_height()/2., 
-                    str(int(width)), ha='left', va='center', fontsize=9, fontweight='bold')
+        # REMOTE flag
+        remote_flags.append(bool(job.get('isRemote', False)))
 
-        plt.tight_layout()
-        st.pyplot(fig)
-        plt.close()
+        # Hiring urgency
+        urgent_flags.append(bool(job.get('hiringDemand', {}).get('isUrgentHire')))
+        high_volume_flags.append(bool(job.get('hiringDemand', {}).get('isHighVolumeHiring')))
 
-        # 3. Job Match Quality Distribution
-        st.markdown("### 📈 Job Match Quality Distribution")
-        
-        fig2, (ax3, ax4) = plt.subplots(1, 2, figsize=(16, 6))
-        
-        # Score distribution histogram
-        all_scores = [job.get('combined_score', 0) for job in matched_jobs]
-        ax3.hist(all_scores, bins=10, color='#8b5cf6', alpha=0.7, edgecolor='black')
-        ax3.set_xlabel('Combined Match Score (%)', fontsize=12, fontweight='bold')
-        ax3.set_ylabel('Number of Jobs', fontsize=12, fontweight='bold')
-        ax3.set_title('Distribution of Match Scores', fontsize=14, fontweight='bold')
-        ax3.grid(True, alpha=0.3)
-        
-        # Add statistics
-        avg_score = np.mean(all_scores)
-        ax3.axvline(avg_score, color='red', linestyle='--', linewidth=2, label=f'Average: {avg_score:.1f}%')
-        ax3.legend()
+        # Job types & benefit count
+        job_types.extend(job.get("jobType", []))
+        benefit_counts.append(len(job.get("benefits", [])))
 
-        # Skill match vs semantic match scatter plot
-        semantic_scores_all = [job.get('semantic_score', 0) for job in matched_jobs]
-        skill_scores_all = [job.get('skill_match_percentage', 0) for job in matched_jobs]
-        
-        scatter = ax4.scatter(semantic_scores_all, skill_scores_all, 
-                             c=all_scores, cmap='viridis', alpha=0.7, s=60)
-        ax4.set_xlabel('Semantic Match Score (%)', fontsize=12, fontweight='bold')
-        ax4.set_ylabel('Skill Match Score (%)', fontsize=12, fontweight='bold')
-        ax4.set_title('Semantic vs Skill Match Correlation', fontsize=14, fontweight='bold')
-        ax4.grid(True, alpha=0.3)
-        
-        # Add colorbar
-        cbar = plt.colorbar(scatter, ax=ax4)
-        cbar.set_label('Combined Score (%)', fontsize=10, fontweight='bold')
+        # Date published
+        date_str = job.get("datePublished", None)
+        try:
+            if date_str:
+                publishing_dates.append(datetime.date.fromisoformat(date_str))
+        except Exception:
+            pass
 
-        plt.tight_layout()
-        st.pyplot(fig2)
-        plt.close()
+    # 1. Match Scores
+    st.subheader("Match Scores for Each Job")
+    match_fig = go.Figure()
+    match_fig.add_trace(go.Bar(x=job_titles, y=similarity_scores, name="Similarity Score"))
+    match_fig.add_trace(go.Bar(x=job_titles, y=skill_scores, name="Skill Match Score"))
+    match_fig.add_trace(go.Bar(x=job_titles, y=exp_scores, name="Experience Match Score"))
+    match_fig.update_layout(barmode='group', xaxis_tickangle=-45, yaxis=dict(title="Score"))
+    st.plotly_chart(match_fig, use_container_width=True)
 
-        # 4. Detailed Skill Analysis
-        st.markdown("### 🔧 Detailed Skill Analysis")
-        
-        if job_seeker_data:
-            candidate_skills = set()
-            hard_skills = job_seeker_data.get('hard_skills', '')
-            if hard_skills:
-                candidate_skills.update([skill.strip().lower() for skill in hard_skills.split(',')])
-            
-            # Analyze skill coverage
-            total_required_skills = set()
-            matched_skills_per_job = []
-            
-            for job in matched_jobs[:5]:  # Top 5 jobs
-                required_skills = set(job.get('matched_skills', []))
-                total_required_skills.update(required_skills)
-                matched_skills_per_job.append(len(required_skills))
-            
-            skill_coverage = len(total_required_skills) / len(candidate_skills) * 100 if candidate_skills else 0
-            
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("Your Unique Skills", len(candidate_skills))
-            with col2:
-                st.metric("Skills Required by Top Jobs", len(total_required_skills))
-            with col3:
-                st.metric("Skill Coverage", f"{skill_coverage:.1f}%")
+    # 2. Salary (Y) vs. Years (X: always None/0 now)
+    st.subheader("Salary Distribution")
+    if any(s is not None for s in avg_salaries):
+        base_salary = [s if s is not None else 0 for s in avg_salaries]
+        salary_fig = go.Figure([go.Bar(x=job_titles, y=base_salary, text=salary_labels, textposition='auto')])
+        salary_fig.update_layout(xaxis_tickangle=-45, yaxis_title="Avg. Salary")
+        st.plotly_chart(salary_fig, use_container_width=True)
 
-        # 5. Job Quality Indicators
-        st.markdown("### 🎯 Job Quality Indicators")
-        
-        # Calculate various metrics
-        high_match_jobs = len([j for j in matched_jobs if j.get('combined_score', 0) >= 80])
-        avg_semantic = np.mean([j.get('semantic_score', 0) for j in matched_jobs])
-        avg_skill = np.mean([j.get('skill_match_percentage', 0) for j in matched_jobs])
-        
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Total Matches", len(matched_jobs))
-        with col2:
-            st.metric("High Quality Matches", high_match_jobs)
-        with col3:
-            st.metric("Avg Semantic Match", f"{avg_semantic:.1f}%")
-        with col4:
-            st.metric("Avg Skill Match", f"{avg_skill:.1f}%")
+    # 3. Applicants
+    st.subheader("Number of Applicants per Job")
+    if any(n is not None for n in num_applicants):
+        appl_fig = go.Figure()
+        appl_fig.add_trace(go.Bar(
+            x=job_titles,
+            y=[n if n is not None else 0 for n in num_applicants],
+            name="Applicants",
+            text=[str(n) if n is not None else "N/A" for n in num_applicants],
+            textposition='auto'
+        ))
+        appl_fig.update_layout(
+            xaxis_tickangle=-45,
+            yaxis=dict(title="Number of Applicants"),
+        )
+        st.plotly_chart(appl_fig, use_container_width=True)
+    else:
+        st.caption("No applicant data available.")
 
-        # 6. Recommendations based on analysis
-        st.markdown("### 💡 Personalized Recommendations")
-        
-        if avg_skill < 50:
-            st.warning("**Skill Development Opportunity**: Your skill match is relatively low. Consider:")
-            st.write("- Focus on learning the most frequently required skills shown above")
-            st.write("- Take online courses for high-demand technologies")
-            st.write("- Work on projects that demonstrate these skills")
-        
-        if avg_semantic > avg_skill:
-            st.info("**Strength in Role Fit**: Your experience and background are well-aligned with these roles, even if specific skills need development.")
-        
-        if high_match_jobs >= 3:
-            st.success("**Strong Market Position**: You have multiple high-quality matches! Focus on applying to these top positions.")
+    # 4. Company Ratings
+    st.subheader("Company Ratings")
+    if any(r is not None for r in company_ratings):
+        fig = go.Figure([go.Bar(
+            x=job_titles,
+            y=[r if r is not None else 0 for r in company_ratings],
+            text=[f"Based on {c} reviews" if c else "" for c in rating_counts],
+            textposition="auto",
+            marker_color='orange'
+        )])
+        fig.update_layout(xaxis_tickangle=-45, yaxis_title="Company Rating (out of 5)")
+        st.plotly_chart(fig, use_container_width=True)
 
-    except Exception as e:
-        st.error(f"Error creating visualizations: {str(e)}")
-        st.info("Please try again with different search parameters")
+    # 5. Remote Ratio
+    st.subheader("Remote vs. Non-Remote Jobs")
+    remote_count = sum(remote_flags)
+    nonremote_count = len(remote_flags) - remote_count
+    if len(remote_flags) > 0:
+        fig = go.Figure(data=[go.Pie(
+            labels=["Remote", "Non-Remote"],
+            values=[remote_count, nonremote_count],
+            hole=0.3
+        )])
+        st.plotly_chart(fig, use_container_width=True)
+
+    # 6. Urgent/High Volume Hiring Pie
+    st.subheader("Urgent/High Volume Hiring")
+    st.write("Urgent Hiring")
+    urgent_n = sum(urgent_flags)
+    not_urgent_n = len(urgent_flags) - urgent_n
+    fig = go.Figure(data=[go.Pie(labels=["Urgent", "Not Urgent"], values=[urgent_n, not_urgent_n], hole=0.3)])
+    st.plotly_chart(fig, use_container_width=True)
+    st.write("High Volume Hiring")
+    highvol_n = sum(high_volume_flags)
+    nothighvol_n = len(high_volume_flags) - highvol_n
+    fig2 = go.Figure(data=[go.Pie(labels=["High Volume", "Other"], values=[highvol_n, nothighvol_n], hole=0.3)])
+    st.plotly_chart(fig2, use_container_width=True)
+
+    # 7. Company size breakdown
+    st.subheader("Company Size Distribution (by employees)")
+    empgroups = [size for size in company_sizes if size and size != "N/A"]
+    if empgroups:
+        emp_counter = Counter(empgroups)
+        fig = go.Figure(data=[go.Bar(x=list(emp_counter.keys()), y=list(emp_counter.values()))])
+        fig.update_layout(yaxis_title="Num Jobs")
+        st.plotly_chart(fig, use_container_width=True)
+
+    # 8. Job Posting Trends (Dates Published)
+    if publishing_dates:
+        st.subheader("Job Posting Trend")
+        date_counter = Counter(publishing_dates)
+        xs = sorted(date_counter.keys())
+        ys = [date_counter[x] for x in xs]
+        fig = go.Figure(data=[go.Bar(x=[str(x) for x in xs], y=ys)])
+        fig.update_layout(xaxis_title="Date Published", yaxis_title="Number of Jobs")
+        st.plotly_chart(fig, use_container_width=True)
+
+    # 9. Job Type Frequency
+    if job_types:
+        st.subheader("Job Type Frequencies")
+        jt_counter = Counter(job_types)
+        fig = go.Figure(data=[go.Bar(x=list(jt_counter.keys()), y=list(jt_counter.values()))])
+        fig.update_layout(yaxis_title="Number of Jobs")
+        st.plotly_chart(fig, use_container_width=True)
+
+    # 10. Number of Benefits per job
+    st.subheader("Number of Benefits per Job (Bar)")
+    fig = go.Figure([go.Bar(x=job_titles, y=benefit_counts, marker_color='lightgreen')])
+    fig.update_layout(xaxis_tickangle=-45, yaxis_title="Benefit Count")
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def create_job_comparison_radar(matched_jobs: List[Dict]):
     """Create radar chart for top 3 job comparisons"""
-    if len(matched_jobs) < 2:
-        return
     
     # Lazy load plotly only when radar chart is created
     go = _get_plotly()
@@ -266,15 +234,15 @@ def create_job_comparison_radar(matched_jobs: List[Dict]):
         st.markdown("### 📊 Job Comparison Radar")
         
         # Define comparison categories
-        categories = ['Skill Match', 'Role Relevance', 'Experience Fit', 'Location Match', 'Salary Alignment']
+        categories = ['Skill Match', 'Role Relevance', 'Total Fit', 'Location Match', 'Salary Alignment']
         
         # Calculate scores for each category (simplified for demo)
         job_scores = []
-        for job in matched_jobs[:3]:
+        for job in matched_jobs[:1]:
             scores = [
                 job.get('skill_match_percentage', 0),
                 job.get('semantic_score', 0),
-                min(job.get('semantic_score', 0) * 0.8, 100),  # Simulated experience fit
+                job.get('combined_score', 0),  # Simulated experience fit
                 75,  # Simulated location match
                 70   # Simulated salary alignment
             ]

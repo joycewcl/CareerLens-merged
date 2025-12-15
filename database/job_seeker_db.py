@@ -26,7 +26,7 @@ DB_PATH_JOB_SEEKER = "database/job_seeker.db"
 class JobSeekerDB:
     """Job seeker database operations for job_seeker.db."""
     
-    def __init__(self, db_path: str = None):
+    def __init__(self, db_path: str = ""):
         self.db_path = Path(db_path or DB_PATH_JOB_SEEKER)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_schema()
