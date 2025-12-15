@@ -262,26 +262,6 @@ except Exception:
 
 
 # ============================================================================
-# HELPER FUNCTIONS
-# ============================================================================
-def display_token_usage():
-    """Display token usage and cost tracking"""
-    if 'token_tracker' in st.session_state:
-        tracker = st.session_state.token_tracker
-        summary = tracker.get_summary()
-        
-        if summary['total_tokens'] > 0:
-            with st.expander("📊 API Usage Stats"):
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("Total Tokens", f"{summary['total_tokens']:,}")
-                with col2:
-                    st.metric("Embedding Tokens", f"{summary['embedding_tokens']:,}")
-                with col3:
-                    st.metric("Est. Cost", f"${summary['estimated_cost_usd']:.4f}")
-
-
-# ============================================================================
 # SIDEBAR NAVIGATION
 # ============================================================================
 st.sidebar.markdown("""
