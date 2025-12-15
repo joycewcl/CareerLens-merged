@@ -151,7 +151,8 @@ def main_analyzer_page():
                         )
                         
                         # Show helpful instructions if it's a configuration error
-                        if "Missing required secrets" in error_msg:
+                        config_error_keywords = ["Missing required secrets", "Connection error", "placeholder API key", "Authentication error", "not configured"]
+                        if any(keyword in error_msg for keyword in config_error_keywords):
                             st.info(
                                 "💡 **How to fix this:**\n\n"
                                 "1. **In Streamlit Cloud:** \n"

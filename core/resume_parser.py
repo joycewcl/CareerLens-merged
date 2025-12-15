@@ -327,6 +327,14 @@ Be thorough and creative!"""
         try:
             # Check if API keys are configured before attempting API call
             is_configured, error_msg = self._config.check_azure_credentials()
+            
+            # Check for placeholder values
+            if is_configured:
+                api_key = self._config.AZURE_OPENAI_API_KEY
+                if api_key and "your-azure-openai-api-key" in api_key:
+                    is_configured = False
+                    error_msg = "Please replace the placeholder API key in .streamlit/secrets.toml with your actual Azure OpenAI API key."
+            
             if not is_configured:
                 print(f"❌ Configuration Error: {error_msg}")
                 fallback = self._fallback_analysis()
@@ -525,6 +533,14 @@ def extract_structured_profile(resume_text: str, enable_verification: bool = Fal
     try:
         # Check if API keys are configured
         is_configured, error_msg = config.check_azure_credentials()
+        
+        # Check for placeholder values
+        if is_configured:
+            api_key = config.AZURE_OPENAI_API_KEY
+            if api_key and "your-azure-openai-api-key" in api_key:
+                is_configured = False
+                error_msg = "Please replace the placeholder API key in .streamlit/secrets.toml with your actual Azure OpenAI API key."
+        
         if not is_configured:
             print(f"❌ Configuration Error: {error_msg}")
             return None
@@ -685,6 +701,14 @@ def generate_tailored_resume(user_profile: Dict, job_posting: Dict,
     try:
         # Check if API keys are configured
         is_configured, error_msg = config.check_azure_credentials()
+        
+        # Check for placeholder values
+        if is_configured:
+            api_key = config.AZURE_OPENAI_API_KEY
+            if api_key and "your-azure-openai-api-key" in api_key:
+                is_configured = False
+                error_msg = "Please replace the placeholder API key in .streamlit/secrets.toml with your actual Azure OpenAI API key."
+        
         if not is_configured:
             print(f"❌ Configuration Error: {error_msg}")
             return None
