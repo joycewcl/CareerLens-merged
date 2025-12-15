@@ -266,17 +266,6 @@ except Exception:
 # ============================================================================
 st.sidebar.markdown("""
 <style>
-    /* CareerLens Logo Container */
-    .careerlens-logo-container {
-        text-align: center;
-        margin-bottom: 1rem;
-        padding: 1rem 0;
-    }
-    .careerlens-logo-container img {
-        max-width: 100%;
-        height: auto;
-        margin-bottom: 0.5rem;
-    }
     .careerlens-tagline {
         font-family: 'Montserrat', sans-serif;
         color: var(--text-secondary-light);
