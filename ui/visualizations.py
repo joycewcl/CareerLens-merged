@@ -8,6 +8,7 @@ skill distributions, and comparative charts.
 import streamlit as st
 from collections import Counter
 import datetime
+from typing import List, Dict
 
 # Lazy imports for heavy visualization libraries
 _pd = None
