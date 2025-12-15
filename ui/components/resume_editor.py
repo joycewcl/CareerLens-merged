@@ -49,23 +49,26 @@ def render_structured_resume_editor(resume_data):
             edited_data['header']['portfolio'] = st.text_input("Portfolio URL", value=resume_data.get('header', {}).get('portfolio', ''), key='resume_portfolio')
     
     # Summary
+    # Get the summary value - prefer session state (for edited/refined), then fall back to resume data
+    summary_value = resume_data.get('summary', '')
+    
+    summary_kwargs = {
+        "label": "Professional Summary",
+        "height": 100,
+        "key": "resume_summary"
+    }
+
     # Check if there's a pending refined summary to display
     if '_pending_refined_summary' in st.session_state:
         # Apply the pending refinement by updating the widget key directly
         st.session_state['resume_summary'] = st.session_state['_pending_refined_summary']
         del st.session_state['_pending_refined_summary']
-    
-    # Get the summary value - prefer session state (for edited/refined), then fall back to resume data
-    summary_value = resume_data.get('summary', '')
+    else:
+        summary_kwargs["value"] = summary_value
     
     col_summary1, col_summary2 = st.columns([4, 1])
     with col_summary1:
-        edited_data['summary'] = st.text_area(
-            "Professional Summary",
-            value=summary_value,
-            height=100,
-            key='resume_summary'
-        )
+        edited_data['summary'] = st.text_area(**summary_kwargs)
     with col_summary2:
         if st.button("✨ Refine with AI", key='refine_summary', use_container_width=True, help="Use AI to improve this section"):
             with st.spinner("🤖 Refining summary..."):
@@ -145,19 +148,22 @@ Return ONLY the improved summary text, no additional explanation."""
                 bullet_key = f'exp_bullet_{i}_{j}'
                 pending_bullet_key = f'_pending_refined_bullet_{i}_{j}'
                 
+                bullet_kwargs = {
+                    "label": f"Bullet {j+1}",
+                    "height": 60,
+                    "key": bullet_key
+                }
+                
                 # Check for pending refined bullet and apply it BEFORE widget renders
                 if pending_bullet_key in st.session_state:
                     st.session_state[bullet_key] = st.session_state[pending_bullet_key]
                     del st.session_state[pending_bullet_key]
+                else:
+                    bullet_kwargs["value"] = bullet
                 
                 col_bullet1, col_bullet2 = st.columns([4, 1])
                 with col_bullet1:
-                    bullet_text = st.text_area(
-                        f"Bullet {j+1}",
-                        value=bullet,
-                        height=60,
-                        key=bullet_key
-                    )
+                    bullet_text = st.text_area(**bullet_kwargs)
                 with col_bullet2:
                     if st.button("✨", key=f'refine_bullet_{i}_{j}', help="Refine this bullet with AI", use_container_width=True):
                         with st.spinner("🤖 Refining..."):
