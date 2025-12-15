@@ -370,7 +370,7 @@ Be thorough and creative!"""
             return ai_analysis
             
         except openai.APIConnectionError as e:
-            error_msg = f"Connection error: {e}. Please check your AZURE_OPENAI_ENDPOINT. It should be 'https://YOUR_RESOURCE.openai.azure.com/'"
+            error_msg = f"Connection error: {e}. Please check your AZURE_OPENAI_ENDPOINT."
             print(f"❌ GPT-4 Connection Error: {error_msg}")
             fallback = self._fallback_analysis()
             fallback['_error'] = error_msg
@@ -601,7 +601,7 @@ Important:
             return None
         
         except openai.APIConnectionError as e:
-            print(f"❌ Connection error: {e}. Please check your AZURE_OPENAI_ENDPOINT. It should be 'https://YOUR_RESOURCE.openai.azure.com/'")
+            print(f"❌ Connection error: {e}. Please check your AZURE_OPENAI_ENDPOINT.")
             return None
             
         except openai.AuthenticationError as e:
