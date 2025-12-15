@@ -16,6 +16,7 @@ def main_analyzer_page():
     # Import dependencies inside function to avoid circular imports
     from core.job_processor import JobSeekerBackend
     from database import save_job_seeker_info
+    from core.resume_parser import extract_structured_profile
     
     # Import WebSocket utilities with fallback
     try:
@@ -136,6 +137,11 @@ def main_analyzer_page():
                     
                     resume_data, ai_analysis = backend.process_resume(cv_file, cv_file.name)
                     
+                    # Also extract detailed structured profile for resume tailoring
+                    tracker.update(2, "Extracting detailed experience history...")
+                    _websocket_keepalive("Detailed extraction")
+                    structured_profile = extract_structured_profile(resume_data['raw_text'])
+                    
                     tracker.update(3, "Analysis complete!")
                     _websocket_keepalive("Complete")
                     
@@ -225,6 +231,10 @@ def main_analyzer_page():
                                 st.info(f"✓ {strength}")
 
                     # Extract and format data
+                    detailed_exp = ""
+                    if structured_profile and structured_profile.get('experience'):
+                        detailed_exp = structured_profile.get('experience')
+                        
                     autofill_data = {
                         # Educational background
                         "education_level": format_ai_data(ai_analysis.get('education_level', '')),
@@ -243,6 +253,7 @@ def main_analyzer_page():
                         # Work experience
                         "work_experience": format_ai_data(ai_analysis.get('work_experience', '')),
                         "project_experience": format_ai_data(ai_analysis.get('project_experience', '')),
+                        "detailed_experience": detailed_exp,
                         
                         # Preferences
                         "location_preference": format_ai_data(ai_analysis.get('location_preference', '')),
@@ -380,6 +391,13 @@ def main_analyzer_page():
 
             # Work Experience
             st.subheader("📈 Work Experience")
+            
+            detailed_experience = st.text_area("Detailed Work Experience (for AI Resume Tailoring)", 
+                                             value=current_data.get("detailed_experience", ""),
+                                             placeholder="Paste your full work history here...",
+                                             height=150,
+                                             help="This detailed experience is used by the AI to generate tailored resumes. It should include company names, titles, dates, and bullet points.")
+            
             col3, col4 = st.columns(2)
 
             with col3:
@@ -452,6 +470,7 @@ def main_analyzer_page():
                         "soft_skills": soft_skills,
                         "work_experience": work_experience,
                         "project_experience": project_experience,
+                        "detailed_experience": detailed_experience,
                         "location_preference": location_preference,
                         "industry_preference": industry_preference,
                         "salary_expectation": salary_expectation,

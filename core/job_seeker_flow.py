@@ -527,7 +527,7 @@ def generate_tailored_resume_for_job(
         'location': profile_data.get('location_preference', ''),
         'linkedin': profile_data.get('linkedin', ''),
         'summary': profile_data.get('summary', ''),
-        'experience': profile_data.get('work_experience', ''),
+        'experience': profile_data.get('detailed_experience') or profile_data.get('work_experience', ''),
         'education': profile_data.get('education_level', '') + ' - ' + profile_data.get('major', ''),
         'skills': profile_data.get('hard_skills', ''),
         'certifications': profile_data.get('certificates', '')

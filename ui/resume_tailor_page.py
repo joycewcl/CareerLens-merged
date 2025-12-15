@@ -95,7 +95,7 @@ def tailored_resume_page():
                             'location': profile_data.get('location_preference', ''),
                             'linkedin': '',
                             'summary': f"Professional with {profile_data.get('work_experience', '')} experience in {profile_data.get('industry_preference', '')}.",
-                            'experience': profile_data.get('work_experience', ''),
+                            'experience': profile_data.get('detailed_experience') or profile_data.get('work_experience', ''),
                             'education': f"{profile_data.get('education_level', '')} in {profile_data.get('major', '')}",
                             'skills': profile_data.get('hard_skills', ''),
                             'certifications': profile_data.get('certificates', '')

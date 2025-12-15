@@ -63,6 +63,7 @@ class JobSeekerDB:
                     soft_skills TEXT,
                     work_experience TEXT,
                     project_experience TEXT,
+                    detailed_experience TEXT,
                     location_preference TEXT,
                     industry_preference TEXT,
                     salary_expectation TEXT,
@@ -76,6 +77,13 @@ class JobSeekerDB:
                 CREATE INDEX IF NOT EXISTS idx_job_seeker_id 
                 ON job_seekers(job_seeker_id)
             """)
+            
+            # Migration: Ensure detailed_experience column exists (for existing databases)
+            try:
+                conn.execute("ALTER TABLE job_seekers ADD COLUMN detailed_experience TEXT")
+            except Exception:
+                # Column likely already exists or table was just created with it
+                pass
     
     @staticmethod
     def generate_job_seeker_id() -> str:
@@ -99,9 +107,9 @@ class JobSeekerDB:
                 INSERT INTO job_seekers (
                     job_seeker_id, timestamp, education_level, major, graduation_status,
                     university_background, languages, certificates, hard_skills, soft_skills,
-                    work_experience, project_experience, location_preference, industry_preference,
+                    work_experience, project_experience, detailed_experience, location_preference, industry_preference,
                     salary_expectation, benefits_expectation, primary_role, simple_search_terms
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 job_seeker_id,
                 timestamp,
@@ -115,6 +123,7 @@ class JobSeekerDB:
                 profile.get('soft_skills', ''),
                 profile.get('work_experience', ''),
                 profile.get('project_experience', ''),
+                profile.get('detailed_experience', ''),
                 profile.get('location_preference', ''),
                 profile.get('industry_preference', ''),
                 profile.get('salary_expectation', ''),
@@ -178,7 +187,7 @@ class JobSeekerDB:
                 SELECT 
                     education_level, major, graduation_status, university_background,
                     languages, certificates, hard_skills, soft_skills,
-                    work_experience, project_experience, location_preference,
+                    work_experience, project_experience, detailed_experience, location_preference,
                     industry_preference, salary_expectation, benefits_expectation,
                     primary_role, simple_search_terms
                 FROM job_seekers
@@ -200,6 +209,7 @@ class JobSeekerDB:
                 "soft_skills": row['soft_skills'] or "",
                 "work_experience": row['work_experience'] or "",
                 "project_experience": row['project_experience'] or "",
+                "detailed_experience": row['detailed_experience'] or "",
                 "location_preference": row['location_preference'] or "",
                 "industry_preference": row['industry_preference'] or "",
                 "salary_expectation": row['salary_expectation'] or "",
