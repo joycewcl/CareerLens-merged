@@ -286,20 +286,16 @@ def display_token_usage():
 # ============================================================================
 st.sidebar.markdown("""
 <style>
-    /* CareerLens Logo and Branding */
-    .careerlens-logo {
-        font-family: 'Montserrat', sans-serif;
-        font-size: 2rem;
-        font-weight: 700;
+    /* CareerLens Logo Container */
+    .careerlens-logo-container {
         text-align: center;
+        margin-bottom: 1rem;
+        padding: 1rem 0;
+    }
+    .careerlens-logo-container img {
+        max-width: 100%;
+        height: auto;
         margin-bottom: 0.5rem;
-        letter-spacing: -1px;
-    }
-    .careerlens-logo .brand-span {
-        color: var(--brand-core);
-    }
-    .careerlens-logo .lens-span {
-        color: var(--brand-glow);
     }
     .careerlens-tagline {
         font-family: 'Montserrat', sans-serif;
@@ -336,12 +332,11 @@ st.sidebar.markdown("""
         color: var(--brand-glow) !important;
     }
 </style>
-
-<div class="careerlens-logo">
-    <span class="brand-span">Career</span><span class="lens-span">Lens</span>
-</div>
-<div class="careerlens-tagline">AI Career Copilot • Hong Kong</div>
 """, unsafe_allow_html=True)
+
+# Display the CareerLens logo
+st.sidebar.image("CareerLens_Logo.png", use_container_width=True)
+st.sidebar.markdown('<div class="careerlens-tagline">AI Career Copilot • Hong Kong</div>', unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
 
@@ -370,60 +365,6 @@ if st.sidebar.button("🔍 Recruitment Match", use_container_width=True, key="re
     st.session_state.current_page = "recruitment_match"
 
 st.sidebar.markdown("---")
-
-# CareerLens Tools sidebar section
-with st.sidebar:
-    st.subheader("🔍 CareerLens Tools")
-    
-    # Display domain filter on job recommendations page
-    if st.session_state.current_page == "job_recommendations":
-        with st.expander("🏭 Industry Filters", expanded=False):
-            target_domains = st.multiselect(
-                "Target Domains",
-                options=["FinTech", "ESG & Sustainability", "Data Analytics", "Digital Transformation", 
-                        "Investment Banking", "Consulting", "Technology", "Healthcare", "Education"],
-                default=st.session_state.get('target_domains', []),
-                key="sidebar_domain_filter"
-            )
-            st.session_state.target_domains = target_domains
-            
-            salary_exp = st.slider(
-                "Min. Salary (HKD)",
-                min_value=0,
-                max_value=150000,
-                value=st.session_state.get('salary_expectation', 0),
-                step=5000,
-                key="sidebar_salary_filter"
-            )
-            st.session_state.salary_expectation = salary_exp
-    
-    # Display token usage
-    display_token_usage()
-    
-    st.markdown("---")
-    st.subheader("🔧 Database Debug")
-    
-    if st.button("View All Job Seeker Records"):
-        try:
-            conn = sqlite3.connect('job_seeker.db')
-            c = conn.cursor()
-            c.execute("SELECT job_seeker_id, timestamp, education_level, primary_role FROM job_seekers ORDER BY id DESC")
-            results = c.fetchall()
-            conn.close()
-            
-            if results:
-                st.write("📋 All Job Seeker Records:")
-                for record in results:
-                    st.write(f"- ID: {record[0]}, Time: {record[1]}, Education: {record[2]}, Role: {record[3]}")
-            else:
-                st.write("No job seeker records yet")
-        except Exception as e:
-            st.error(f"Query failed: {e}")
-    
-    # Display current session state
-    current_id = st.session_state.get('job_seeker_id')
-    if current_id:
-        st.info(f"Current Session ID: **{current_id}**")
 
 
 # ============================================================================
