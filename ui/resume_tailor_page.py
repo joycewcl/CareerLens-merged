@@ -78,13 +78,35 @@ def tailored_resume_page():
         </div>
         """, unsafe_allow_html=True)
         
+        # Get current job seeker ID
+        job_seeker_id = st.session_state.get('job_seeker_id')
+        
+        # Hydrate user_profile from DB if missing (critical for resume generator)
+        if job_seeker_id and FLOW_AVAILABLE:
+            if not st.session_state.get('user_profile') or not st.session_state.user_profile.get('name'):
+                try:
+                    profile_data = get_job_seeker_profile(job_seeker_id)
+                    if profile_data:
+                        # Construct a basic profile from DB data to satisfy the resume generator
+                        st.session_state.user_profile = {
+                            'name': f"Job Seeker {job_seeker_id[-6:]}", 
+                            'email': '',
+                            'phone': '',
+                            'location': profile_data.get('location_preference', ''),
+                            'linkedin': '',
+                            'summary': f"Professional with {profile_data.get('work_experience', '')} experience in {profile_data.get('industry_preference', '')}.",
+                            'experience': profile_data.get('work_experience', ''),
+                            'education': f"{profile_data.get('education_level', '')} in {profile_data.get('major', '')}",
+                            'skills': profile_data.get('hard_skills', ''),
+                            'certifications': profile_data.get('certificates', '')
+                        }
+                except Exception as e:
+                    print(f"Error hydrating profile: {e}")
+
         # Check if there's a job already selected for resume generation
         if st.session_state.get('show_resume_generator', False) and st.session_state.get('selected_job'):
             modular_display_resume_generator()
             return
-        
-        # Get current job seeker ID
-        job_seeker_id = st.session_state.get('job_seeker_id')
         
         # Check if user has job_seeker_id (profile saved)
         if not job_seeker_id:
