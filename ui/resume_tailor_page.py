@@ -89,12 +89,13 @@ def tailored_resume_page():
                     if profile_data:
                         # Construct a basic profile from DB data to satisfy the resume generator
                         st.session_state.user_profile = {
-                            'name': f"Job Seeker {job_seeker_id[-6:]}", 
-                            'email': '',
-                            'phone': '',
+                            'name': profile_data.get('name') or f"Job Seeker {job_seeker_id[-6:]}", 
+                            'email': profile_data.get('email', ''),
+                            'phone': profile_data.get('phone', ''),
                             'location': profile_data.get('location_preference', ''),
-                            'linkedin': '',
-                            'summary': f"Professional with {profile_data.get('work_experience', '')} experience in {profile_data.get('industry_preference', '')}.",
+                            'linkedin': profile_data.get('linkedin', ''),
+                            'portfolio': profile_data.get('portfolio', ''),
+                            'summary': profile_data.get('summary') or f"Professional with {profile_data.get('work_experience', '')} experience in {profile_data.get('industry_preference', '')}.",
                             'experience': profile_data.get('detailed_experience') or profile_data.get('work_experience', ''),
                             'education': f"{profile_data.get('education_level', '')} in {profile_data.get('major', '')}",
                             'skills': profile_data.get('hard_skills', ''),

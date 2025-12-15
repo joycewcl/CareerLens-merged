@@ -236,6 +236,14 @@ def main_analyzer_page():
                         detailed_exp = structured_profile.get('experience')
                         
                     autofill_data = {
+                        # Personal Info
+                        "name": structured_profile.get("name", "") if structured_profile else "",
+                        "email": structured_profile.get("email", "") if structured_profile else "",
+                        "phone": structured_profile.get("phone", "") if structured_profile else "",
+                        "linkedin": structured_profile.get("linkedin", "") if structured_profile else "",
+                        "portfolio": structured_profile.get("portfolio", "") if structured_profile else "",
+                        "summary": structured_profile.get("summary", "") if structured_profile else "",
+                        
                         # Educational background
                         "education_level": format_ai_data(ai_analysis.get('education_level', '')),
                         "major": format_ai_data(ai_analysis.get('major', '')),
@@ -314,6 +322,18 @@ def main_analyzer_page():
 
             # Use data from session_state
             current_data = st.session_state.get('autofill_data', {})
+
+            # Personal Information - Added for Name/Email export fix
+            st.subheader("👤 Personal Information")
+            col_p1, col_p2 = st.columns(2)
+            with col_p1:
+                name = st.text_input("Full Name", value=current_data.get("name", ""), placeholder="e.g., John Doe")
+                email = st.text_input("Email", value=current_data.get("email", ""), placeholder="e.g., john@example.com")
+                phone = st.text_input("Phone", value=current_data.get("phone", ""), placeholder="e.g., +123456789")
+            with col_p2:
+                linkedin = st.text_input("LinkedIn URL", value=current_data.get("linkedin", ""), placeholder="e.g., linkedin.com/in/johndoe")
+                portfolio = st.text_input("Portfolio URL", value=current_data.get("portfolio", ""), placeholder="e.g., portfolio.com")
+                summary = st.text_area("Professional Summary", value=current_data.get("summary", ""), height=100, placeholder="Brief summary of your professional background")
 
             # Career Preferences - new fields at top of form
             st.subheader("🎯 Career Preferences")
@@ -460,6 +480,12 @@ def main_analyzer_page():
                 else:
                     # Save to database - pass as dictionary
                     profile_data = {
+                        "name": name,
+                        "email": email,
+                        "phone": phone,
+                        "linkedin": linkedin,
+                        "portfolio": portfolio,
+                        "summary": summary,
                         "education_level": education_level,
                         "major": major,
                         "graduation_status": graduation_status,

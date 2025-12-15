@@ -69,7 +69,13 @@ class JobSeekerDB:
                     salary_expectation TEXT,
                     benefits_expectation TEXT,
                     primary_role TEXT,
-                    simple_search_terms TEXT
+                    simple_search_terms TEXT,
+                    name TEXT,
+                    email TEXT,
+                    phone TEXT,
+                    linkedin TEXT,
+                    portfolio TEXT,
+                    summary TEXT
                 )
             """)
             # Add indexes
@@ -78,12 +84,13 @@ class JobSeekerDB:
                 ON job_seekers(job_seeker_id)
             """)
             
-            # Migration: Ensure detailed_experience column exists (for existing databases)
-            try:
-                conn.execute("ALTER TABLE job_seekers ADD COLUMN detailed_experience TEXT")
-            except Exception:
-                # Column likely already exists or table was just created with it
-                pass
+            # Migration: Ensure new columns exist (for existing databases)
+            for col in ['detailed_experience', 'name', 'email', 'phone', 'linkedin', 'portfolio', 'summary']:
+                try:
+                    conn.execute(f"ALTER TABLE job_seekers ADD COLUMN {col} TEXT")
+                except Exception:
+                    # Column likely already exists or table was just created with it
+                    pass
     
     @staticmethod
     def generate_job_seeker_id() -> str:
@@ -108,8 +115,9 @@ class JobSeekerDB:
                     job_seeker_id, timestamp, education_level, major, graduation_status,
                     university_background, languages, certificates, hard_skills, soft_skills,
                     work_experience, project_experience, detailed_experience, location_preference, industry_preference,
-                    salary_expectation, benefits_expectation, primary_role, simple_search_terms
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    salary_expectation, benefits_expectation, primary_role, simple_search_terms,
+                    name, email, phone, linkedin, portfolio, summary
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 job_seeker_id,
                 timestamp,
@@ -129,7 +137,13 @@ class JobSeekerDB:
                 profile.get('salary_expectation', ''),
                 profile.get('benefits_expectation', ''),
                 profile.get('primary_role', ''),
-                profile.get('simple_search_terms', '')
+                profile.get('simple_search_terms', ''),
+                profile.get('name', ''),
+                profile.get('email', ''),
+                profile.get('phone', ''),
+                profile.get('linkedin', ''),
+                profile.get('portfolio', ''),
+                profile.get('summary', '')
             ))
             return job_seeker_id
     
