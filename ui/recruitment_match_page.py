@@ -45,7 +45,7 @@ def recruitment_match_dashboard():
 
 def recruitment_match_page():
     """Recruitment Match Page"""
-    from database.queries import get_all_jobs_for_matching, get_all_job_seekers
+    from database.queries import get_all_jobs_for_matching_tuples, get_all_job_seekers_formatted
     from core.job_matcher import analyze_match_simple
     
     # Import WebSocket utilities with fallback
@@ -86,8 +86,8 @@ def recruitment_match_page():
     st.title("🎯 Recruitment Match - Smart Talent Matching")
 
     # Get data
-    jobs = get_all_jobs_for_matching()
-    seekers = get_all_job_seekers()
+    jobs = get_all_jobs_for_matching_tuples()
+    seekers = get_all_job_seekers_formatted()
 
     if not jobs:
         st.warning("❌ No available position information, please first publish positions in the headhunter module")

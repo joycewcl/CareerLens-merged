@@ -789,9 +789,6 @@ def _display_job_matches(matched_jobs: List[Dict], num_jobs_to_show: int, job_se
                     st.session_state.selected_job_for_resume = job
                     st.session_state.show_resume_generator = True
 
-            # Create radar chart for this job, added 15/12/2025 by Michael
-            create_job_comparison_radar([result])
-        
             # Show resume generator if selected
             if st.session_state.get('show_resume_generator') and st.session_state.get('selected_job_for_resume', {}).get('id') == job.get('id'):
                 with st.container():
@@ -808,6 +805,9 @@ def _display_job_matches(matched_jobs: List[Dict], num_jobs_to_show: int, job_se
                         st.session_state.show_resume_generator = False
                         st.session_state.selected_job_for_resume = None
                         st.rerun()
+
+            # Create radar chart for this job, added 15/12/2025 by Michael
+            create_job_comparison_radar([result])
 
 
 def _display_resume_generator_ui(job: Dict, user_profile: Dict, resume_text: str = ""):
