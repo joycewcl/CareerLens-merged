@@ -13,6 +13,9 @@ def render_sidebar():
     The sidebar is simplified to only handle profile upload and filter settings.
     """
     with st.sidebar:
+        # Display logo image at the top
+        st.image("CareerLens_Logo.png", use_container_width=True)
+        
         st.markdown("""
         <style>
             .sidebar-logo {
