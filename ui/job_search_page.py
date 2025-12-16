@@ -800,7 +800,9 @@ def _display_job_matches(matched_jobs: List[Dict], num_jobs_to_show: int, job_se
             with col_btn2:
                 # Resume tailoring button
                 if st.button("✨ Tailor Resume", key=f"tailor_{job.get('id', i)}", use_container_width=True):
+                    # Set both session state variables for compatibility
                     st.session_state.selected_job_for_resume = job
+                    st.session_state.selected_job = job
                     st.session_state.show_resume_generator = True
 
             # Show resume generator if selected

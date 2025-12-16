@@ -284,6 +284,8 @@ def display_token_usage():
 # ============================================================================
 # SIDEBAR NAVIGATION
 # ============================================================================
+st.sidebar.image("CareerLens_Logo.png", use_container_width=True)
+
 st.sidebar.markdown("""
 <style>
     /* CareerLens Logo and Branding */

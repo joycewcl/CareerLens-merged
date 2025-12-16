@@ -379,7 +379,7 @@ def main_analyzer_page():
                 )
 
             with col2:
-                uni_options = ["Please select", "985 Universities", "211 Universities", "Overseas Universities", "Hong Kong Undergraduate Universities", "Other"]
+                uni_options = ["Please select", "985 Universities", "211 Universities", "Overseas Universities", "Hong Kong Universities", "Other"]
                 uni_bg = current_data.get("university_background", "")
                 uni_index = smart_select_match(uni_bg, uni_options)
                 
