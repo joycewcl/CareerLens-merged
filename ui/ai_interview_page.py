@@ -73,7 +73,7 @@ def ai_interview_page():
         **To get interview practice jobs:**
         
         1. **Search for jobs** on the Job Search page
-        2. Jobs with ≥60% match will be automatically saved
+        2. All matched jobs will be automatically saved for your practice
         3. Return here to practice interviewing for those jobs
         
         Or, headhunters can publish positions in the Headhunter module.

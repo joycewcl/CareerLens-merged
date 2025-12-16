@@ -427,14 +427,15 @@ def job_recommendations_page(job_seeker_id: Optional[str] = None):
                                             for job in matched_jobs:
                                                 combined_score = job.get('combined_score', job.get('combined_match_score', 0))
                                                 
-                                                if combined_score >= MATCH_SCORE_THRESHOLD:
-                                                    job_record = _prepare_job_for_storage(current_job_seeker_id, job)
-                                                    jobs_to_store.append(job_record)
+                                                # Save all matched jobs regardless of score
+                                                # if combined_score >= MATCH_SCORE_THRESHOLD:
+                                                job_record = _prepare_job_for_storage(current_job_seeker_id, job)
+                                                jobs_to_store.append(job_record)
                                             
                                             # Store in job_post_API.db
                                             if jobs_to_store:
                                                 saved_count = save_matched_jobs_batch(jobs_to_store)
-                                                st.caption(f"💾 Saved {saved_count} jobs above {MATCH_SCORE_THRESHOLD}% match to your profile")
+                                                st.caption(f"💾 Saved {saved_count} matched jobs to your profile")
                                         except Exception as e:
                                             # Don't block the UI if storage fails
                                             print(f"Warning: Could not store matched jobs: {e}")

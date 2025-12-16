@@ -9,7 +9,7 @@ This module handles all database operations for job_post_API.db:
 
 Data Flow Step 2:
     Job Search → Indeed API → Semantic Search → Cosine Similarity → Store in job_post_API.db
-    (Only jobs above threshold, e.g., >60% match)
+    (All matched jobs are saved)
 
 Data Flow Step 3:
     Tailored Resume: Retrieve from job_post_API.db WHERE job_seeker_id = current_user

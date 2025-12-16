@@ -116,10 +116,21 @@ def create_enhanced_visualizations(matched_jobs, job_seeker_data=None):
             posting_dates.append(str(dtxt))
 
         # Skills
-        skillstr = job.get("matched_skills", "") or ""
-        missstr = job.get("missing_skills", "") or ""
-        skill_match_counts.append(len([x.strip() for x in skillstr.split(",") if x.strip()]))
-        missing_skill_counts.append(len([x.strip() for x in missstr.split(",") if x.strip()]))
+        skill_val = job.get("matched_skills")
+        if isinstance(skill_val, list):
+            skill_match_counts.append(len(skill_val))
+        elif isinstance(skill_val, str):
+            skill_match_counts.append(len([x.strip() for x in skill_val.split(",") if x.strip()]))
+        else:
+            skill_match_counts.append(0)
+
+        miss_val = job.get("missing_skills")
+        if isinstance(miss_val, list):
+            missing_skill_counts.append(len(miss_val))
+        elif isinstance(miss_val, str):
+            missing_skill_counts.append(len([x.strip() for x in miss_val.split(",") if x.strip()]))
+        else:
+            missing_skill_counts.append(0)
 
     # 1. Match Score Comparison
     st.subheader("Match Scores for Each Job")

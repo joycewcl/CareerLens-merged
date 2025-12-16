@@ -27,7 +27,7 @@ Step 2: Job Matching & API Storage
     Rank jobs by match score
          ↓
     Store matched jobs in job_post_API.db
-       (Only jobs above threshold, e.g., >60% match)
+       (All matched jobs are saved)
 
 Step 3: AI Resume & Interview Use Cases
     Tailored Resume Generation:

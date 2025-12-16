@@ -144,7 +144,7 @@ def tailored_resume_page():
         # Display saved jobs from job_post_API.db (priority)
         if saved_jobs and len(saved_jobs) > 0:
             st.markdown("### 💾 Your Saved Matched Jobs")
-            st.caption(f"Jobs from your profile with match scores above {MATCH_SCORE_THRESHOLD}%")
+            st.caption(f"Jobs from your profile with match scores")
             
             _display_job_selection(saved_jobs, source="db")
             
@@ -161,7 +161,7 @@ def tailored_resume_page():
             ### How to get matched jobs:
             1. Go to **Job Search** page
             2. Search for jobs matching your profile
-            3. Jobs with match score ≥60% will be saved automatically
+            3. All matched jobs will be saved automatically
             4. Return here to generate tailored resumes
             """)
             if st.button("🔍 Go to Job Search", use_container_width=True):
@@ -175,7 +175,7 @@ def tailored_resume_page():
         with col1:
             st.markdown("""
             **1️⃣ Select a Job**  
-            Choose from your saved matches (jobs with ≥60% match are saved automatically).
+            Choose from your saved matches.
             """)
         with col2:
             st.markdown("""
