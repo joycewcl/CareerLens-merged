@@ -1250,3 +1250,100 @@ Return ONLY valid JSON with the same structure as the input. No additional text 
     except Exception as e:
         st.warning(f"⚠️ Verification error: {e}. Using original profile data.")
         return profile_data
+
+
+def extract_job_posting_from_text(job_text: str, config=None) -> Optional[Dict]:
+    """Extract job posting details from text using Azure OpenAI.
+    
+    Args:
+        job_text: Raw job description text
+        config: Optional config object
+        
+    Returns:
+        Dictionary with extracted job fields or None if extraction fails
+    """
+    if config is None:
+        from config import Config
+        config = Config
+    
+    try:
+        # Check if API keys are configured
+        is_configured, error_msg = config.check_azure_credentials()
+        
+        if not is_configured:
+            print(f"❌ Configuration Error: {error_msg}")
+            return None
+        
+        from openai import AzureOpenAI
+        import httpx
+        
+        # Clean endpoint
+        endpoint = config.AZURE_ENDPOINT
+        if endpoint:
+            endpoint = endpoint.rstrip('/')
+            if endpoint.endswith('/openai'):
+                endpoint = endpoint[:-7]
+        
+        # Create a custom http client
+        http_client = httpx.Client(verify=False)
+
+        client = AzureOpenAI(
+            azure_endpoint=endpoint,
+            api_key=config.AZURE_API_KEY,
+            api_version=config.AZURE_API_VERSION,
+            http_client=http_client
+        )
+        
+        prompt = f"""You are a job posting parser. Extract structured information from the following job description text.
+
+JOB DESCRIPTION TEXT:
+{job_text[:10000]}
+
+Please extract and return the following information in JSON format:
+{{
+    "job_title": "Position Title",
+    "employment_type": "Full-time/Part-time/Contract/Internship",
+    "job_description": "Detailed introduction (summary)",
+    "main_responsibilities": "List of responsibilities (bullet points)",
+    "required_skills": "List of required skills and qualifications (bullet points)",
+    "client_company": "Company Name",
+    "industry": "Industry (Technology/Finance/Consulting/Healthcare/Education/Manufacturing/Retail/Other)",
+    "work_location": "Location (Hong Kong/Mainland China/Overseas/Remote)",
+    "work_type": "Remote/Hybrid/Office",
+    "company_size": "Startup (1-50)/SME (51-200)/Large Enterprise (201-1000)/Multinational (1000+)",
+    "experience_level": "Fresh Graduate/1-3 years/3-5 years/5-10 years/10+ years",
+    "visa_support": "Work Visa/Not provided/Assistance provided/Must have own visa",
+    "min_salary": 30000,
+    "max_salary": 50000,
+    "currency": "HKD",
+    "benefits": "List of benefits",
+    "application_method": "Contact info or application instructions"
+}}
+
+Important:
+- Infer missing fields based on context (e.g., set default "Office" for work_type if not specified).
+- Standardize enum values as requested above.
+- If salary is not found, estimate a reasonable range or use 0.
+- Return ONLY valid JSON, no additional text."""
+        
+        print("🤖 Extracting job posting information...")
+        
+        response = client.chat.completions.create(
+            model=config.AZURE_MODEL,
+            messages=[
+                {"role": "system", "content": "You are a job posting parser. Extract structured information and return only valid JSON."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=2000,
+            temperature=0.3,
+            response_format={"type": "json_object"}
+        )
+        
+        content = response.choices[0].message.content
+        job_data = json.loads(content)
+        print("✅ Job posting extraction complete")
+        return job_data
+        
+    except Exception as e:
+        print(f"❌ Job posting extraction error: {e}")
+        return None
