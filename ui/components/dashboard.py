@@ -679,6 +679,7 @@ def display_match_breakdown(matched_jobs, user_profile):
             if st.button("✨ Tailor Resume for this Job", use_container_width=True, type="primary", key="tailor_resume_button"):
                 st.session_state.selected_job = job
                 st.session_state.show_resume_generator = True
+                st.session_state.current_page = "tailored_resume"
                 st.rerun()
             
             st.caption("Generates a citation-locked, AI-optimized CV emphasizing your matching skills.")
