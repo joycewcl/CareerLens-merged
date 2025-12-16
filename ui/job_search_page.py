@@ -664,7 +664,21 @@ def _display_job_matches(matched_jobs: List[Dict], num_jobs_to_show: int, job_se
             f"- {match_emoji} {match_label} ({combined:.1f}%)"
         )
 
-        with st.expander(expander_title, expanded=i <= 2):
+        # Check if this job is selected for resume tailoring to keep expanded
+        is_selected_for_resume = False
+        selected_job = st.session_state.get('selected_job_for_resume')
+        if st.session_state.get('show_resume_generator') and selected_job:
+            # Check by ID if available, otherwise by title and company
+            if job.get('id') is not None and selected_job.get('id') is not None:
+                is_selected_for_resume = (str(job.get('id')) == str(selected_job.get('id')))
+            else:
+                # Fallback check
+                is_selected_for_resume = (
+                    job.get('title') == selected_job.get('title') and 
+                    job.get('company') == selected_job.get('company')
+                )
+
+        with st.expander(expander_title, expanded=(i <= 2) or is_selected_for_resume):
 
             # Scores - use result for scores, job for job data
             semantic_score = result.get('semantic_score', result.get('similarity_score', 0))
